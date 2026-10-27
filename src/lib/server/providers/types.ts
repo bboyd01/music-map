@@ -75,7 +75,7 @@ export interface MusicProvider {
 export class ProviderError extends Error {
 	constructor(
 		message: string,
-		readonly provider: ProviderName | 'musicbrainz' | 'wikidata' | 'artwork',
+		readonly provider: ProviderName | 'musicbrainz' | 'wikidata' | 'lastfm' | 'artwork',
 		readonly status?: number
 	) {
 		super(message);

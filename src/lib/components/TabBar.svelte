@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { page } from '$app/state';
 
+	let { suggestionCount = 0 }: { suggestionCount?: number } = $props();
+
 	const tabs = [
 		{ href: '/list', label: 'List', icon: 'M4 6h16M4 12h16M4 18h10' },
 		{
@@ -28,9 +30,14 @@
 <nav aria-label="Main">
 	{#each tabs as tab (tab.href)}
 		<a href={tab.href} aria-current={active(tab.href) ? 'page' : undefined}>
-			<svg viewBox="0 0 24 24" aria-hidden="true">
-				<path d={tab.icon} />
-			</svg>
+			<span class="icon">
+				<svg viewBox="0 0 24 24" aria-hidden="true">
+					<path d={tab.icon} />
+				</svg>
+				{#if tab.href === '/suggestions' && suggestionCount}
+					<span class="badge" aria-label="{suggestionCount} pending">{suggestionCount > 99 ? '99+' : suggestionCount}</span>
+				{/if}
+			</span>
 			<span>{tab.label}</span>
 		</a>
 	{/each}
@@ -66,7 +73,26 @@
 	a[aria-current='page'] {
 		color: var(--accent);
 	}
-	span {
+	.icon {
+		position: relative;
+		display: flex;
+	}
+	.badge {
+		position: absolute;
+		top: -6px;
+		left: 14px;
+		min-width: 18px;
+		height: 18px;
+		padding: 0 5px;
+		border-radius: 9px;
+		background: var(--accent);
+		color: var(--accent-text);
+		font-size: 0.68rem;
+		font-weight: 700;
+		line-height: 18px;
+		text-align: center;
+	}
+	span:not(.icon, .badge) {
 		max-width: 100%;
 		overflow: hidden;
 		text-overflow: ellipsis;

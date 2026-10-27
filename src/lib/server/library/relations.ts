@@ -62,10 +62,6 @@ export function removeEdge(db: DbOrTx, id: number): { removed: boolean; deletedE
 	return { removed: true, deletedEntities: [...collectGarbage(db, edge.fromId), ...collectGarbage(db, edge.toId)] };
 }
 
-export function setEdgeStatus(db: DbOrTx, id: number, status: Edge['status']): Edge | undefined {
-	return db.update(edges).set({ status }).where(eq(edges.id, id)).returning().get();
-}
-
 export const StubInput = z.object({
 	kind: z.enum(['artist', 'album', 'track']),
 	name: z.string().trim().min(1).max(300),

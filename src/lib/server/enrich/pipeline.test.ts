@@ -55,7 +55,7 @@ describe('enrichment pipeline (recorded fixtures)', () => {
 		const { add, worker, fetchImpl, mbCalls } = setup();
 		await add(KIND_OF_BLUE);
 		expect(byName('Kind of Blue').enrichStatus).toBe('pending');
-		expect(await worker.drain()).toBe(2); // album, then artist
+		expect(await worker.drain()).toBe(3); // album, artist, then the artist's suggestions
 
 		const album = byName('Kind of Blue');
 		expect(album.enrichStatus).toBe('done');
@@ -127,10 +127,11 @@ describe('enrichment pipeline (recorded fixtures)', () => {
 		const job = claimNext(db)!; // the process "dies" while this job is running
 		expect(job.status).toBe('running');
 		expect(recoverInterrupted(db)).toBe(1); // next boot
-		expect(await worker.drain()).toBe(2);
-		expect(db.select().from(jobs).all().map((j) => [j.status, j.attempts])).toEqual([
-			['done', 2],
-			['done', 1]
+		expect(await worker.drain()).toBe(3);
+		expect(db.select().from(jobs).all().map((j) => [j.type, j.status, j.attempts])).toEqual([
+			['enrich', 'done', 2],
+			['enrich', 'done', 1],
+			['suggest', 'done', 1]
 		]);
 		expect(own(byName('Kind of Blue').id, 'genre')).toEqual(['cool jazz', 'jazz']);
 	});

@@ -13,13 +13,37 @@ import { commitAdd } from '../src/lib/server/library/service.ts';
 import { AppleProvider } from '../src/lib/server/providers/apple.ts';
 import { FIXTURE_DIR, recordingFetch, type Fixture } from '../src/lib/server/providers/fixtures.ts';
 import { MusicBrainzClient } from '../src/lib/server/providers/musicbrainz.ts';
+import { WikidataClient } from '../src/lib/server/providers/wikidata.ts';
+import { createStub } from '../src/lib/server/library/relations.ts';
 
 export const ENRICH_ADDS = [
 	{ provider: 'apple', kind: 'album', id: '268443092', country: 'us' }, // Kind of Blue
 	{ provider: 'apple', kind: 'track', id: '268443097', country: 'us' }, // So What
 	{ provider: 'apple', kind: 'album', id: '476935391', country: 'us' } // Gould: Goldberg Variations (1981)
 ] as const;
+export const STUB_ARTIST = 'Ludwig van Beethoven';
 export const MB_USER_AGENT = 'MusicMap/0.1 (https://github.com/bboyd01/music-map)';
+
+/**
+ * Real responses are trimmed to the fields the clients read: Wikidata entities are 100–400 KB each,
+ * and MusicBrainz artist relation lists can be long.
+ */
+function trim(f: Fixture): Fixture {
+	const body = f.body as Record<string, any>;
+	if (f.request.url.includes('wikidata.org') && body?.entities) {
+		const entities = Object.fromEntries(
+			Object.entries(body.entities as Record<string, any>).map(([k, e]) => [
+				k,
+				{ id: e.id, labels: e.labels?.en ? { en: e.labels.en } : {}, claims: { P434: e.claims?.P434, P737: e.claims?.P737 } }
+			])
+		);
+		return { ...f, body: { entities } };
+	}
+	if (f.request.url.includes('musicbrainz.org/ws/2/artist/') && Array.isArray(body?.relations)) {
+		return { ...f, body: { ...body, relations: body.relations.filter((r: any) => r.type === 'wikidata' || r.type === 'teacher') } };
+	}
+	return f;
+}
 
 /** Runs the real add + enrichment flow and records every request it makes. */
 async function recordEnrichment() {
@@ -28,12 +52,17 @@ async function recordEnrichment() {
 	const artworkDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mm-record-'));
 	const providers = { apple: new AppleProvider({ fetchImpl }), spotify: null };
 	const mb = new MusicBrainzClient({ userAgent: MB_USER_AGENT, fetchImpl });
-	const { worker, enqueue } = createEnrichment({ db, mb, providers, artworkDir, fetchImpl, log: console.log });
+	const wikidata = new WikidataClient({ userAgent: MB_USER_AGENT, fetchImpl });
+	const { worker, enqueue } = createEnrichment({ db, mb, wikidata, providers, artworkDir, fetchImpl, log: console.log });
 	for (const ref of ENRICH_ADDS) {
 		console.log(await commitAdd({ db, providers, artworkDir, fetchImpl, enqueueEnrich: enqueue }, ref));
 		console.log('jobs run:', await worker.drain());
 	}
-	fs.writeFileSync(path.join(FIXTURE_DIR, 'enrich.json'), JSON.stringify(fetchImpl.recorded, null, '\t') + '\n');
+	// A stub artist with MusicBrainz teacher relationships and a Wikidata item, for suggestions.
+	const { entity } = createStub(db, { kind: 'artist', name: STUB_ARTIST });
+	enqueue({ entityId: entity.id });
+	console.log('jobs run:', await worker.drain());
+	fs.writeFileSync(path.join(FIXTURE_DIR, 'enrich.json'), JSON.stringify(fetchImpl.recorded.map(trim), null, '\t') + '\n');
 	console.log(`recorded ${fetchImpl.recorded.length} exchanges`);
 }
 

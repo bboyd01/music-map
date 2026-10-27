@@ -116,6 +116,21 @@ Tags are inherited: a track without its own genre shows its album's, then its ar
 tag facet makes it yours; re-enrichment never touches it. Jobs retry up to 3 times with backoff and
 resume after a restart; a failed enrichment never affects the item itself.
 
+## Suggestions
+
+After an artist is enriched, a background job proposes links:
+
+- **Wikidata** "influenced by" (P737), reached through the artist's MusicBrainz → Wikidata link.
+  Only influences that have a MusicBrainz artist id are kept (up to 10 per artist). Coverage is
+  uneven: good for classical and well-known acts, thin elsewhere.
+- **MusicBrainz** teacher/student relationships (read as "inspired").
+- **Last.fm** similar artists, if `LASTFM_API_KEY` is set (top 5 with a match of 0.5 or more).
+
+Suggested artists are added as stubs but not enriched until you accept, so suggestions don't
+snowball. Review them in **Suggestions** (or on an item's page): accepted ones become normal
+links, rejected ones are remembered and never proposed again, and stubs nothing else uses are
+removed. Suggested links show on the map (dotted) with the **Suggested** toggle.
+
 ## Security notes
 
 - Everything except `/login`, `/healthz`, and static PWA assets (manifest, icons, service worker,

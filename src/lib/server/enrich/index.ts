@@ -1,6 +1,8 @@
-import { MB_USER_AGENT } from '$app/env/private';
+import { LASTFM_API_KEY, MB_USER_AGENT } from '$app/env/private';
 import { artworkDir, getDb } from '../db/index.ts';
+import { LastfmClient } from '../providers/lastfm.ts';
 import { MusicBrainzClient } from '../providers/musicbrainz.ts';
+import { WikidataClient } from '../providers/wikidata.ts';
 import { getProviders } from '../providers/index.ts';
 import { createEnrichment } from './runner.ts';
 import { seedEras } from './tags.ts';
@@ -15,6 +17,9 @@ export function enrichment() {
 		instance = createEnrichment({
 			db: getDb(),
 			mb: MB_USER_AGENT ? new MusicBrainzClient({ userAgent: MB_USER_AGENT }) : null,
+			// Wikimedia also asks for a descriptive User-Agent with contact info.
+			wikidata: MB_USER_AGENT ? new WikidataClient({ userAgent: MB_USER_AGENT }) : null,
+			lastfm: LASTFM_API_KEY ? new LastfmClient({ apiKey: LASTFM_API_KEY }) : null,
 			providers: getProviders(),
 			artworkDir,
 			log

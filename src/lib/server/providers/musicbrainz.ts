@@ -93,7 +93,18 @@ const Artist = z.object({
 	name: z.string(),
 	type: z.string().nullish(),
 	'life-span': LifeSpan.nullish(),
-	genres: z.array(Genre).default([])
+	genres: z.array(Genre).default([]),
+	relations: z
+		.array(
+			z.object({
+				type: z.string(),
+				direction: z.string().nullish(),
+				'target-type': z.string().nullish(),
+				url: z.object({ resource: z.string() }).nullish(),
+				artist: z.object({ id: z.string(), name: z.string() }).nullish()
+			})
+		)
+		.default([])
 });
 
 const ArtistSearch = z.object({
@@ -122,6 +133,11 @@ export interface MbArtist {
 	begin?: string;
 	end?: string;
 	genres: { name: string; count: number }[];
+	/** Only with `relations: true`. */
+	wikidata?: string;
+	/** MusicBrainz "teacher" relationships, read as influence: teacher → student. */
+	teachers?: { id: string; name: string }[];
+	students?: { id: string; name: string }[];
 }
 
 const credit = (c: z.infer<typeof ArtistCredit>) => c.map((a) => ({ id: a.artist.id, name: a.artist.name, credited: a.name }));
@@ -241,16 +257,25 @@ export class MusicBrainzClient {
 		return { id: r.id, title: r.title, hasFrontCover: r['cover-art-archive']?.front ?? false, artists: credit(r['artist-credit']), recordings };
 	}
 
-	async getArtist(id: string): Promise<MbArtist | null> {
-		const a = await this.get(`artist/${id}`, { inc: 'genres' }, Artist);
+	async getArtist(id: string, { relations = false } = {}): Promise<MbArtist | null> {
+		const a = await this.get(`artist/${id}`, { inc: relations ? 'genres+url-rels+artist-rels' : 'genres' }, Artist);
 		if (!a) return null;
+		const teacherRels = (direction: string) =>
+			a.relations.flatMap((r) => (r.type === 'teacher' && r.direction === direction && r.artist ? [r.artist] : []));
+		const wikidataUrl = a.relations.find((r) => r.type === 'wikidata' && r.url)?.url?.resource;
 		return {
 			id: a.id,
 			name: a.name,
 			type: a.type ?? undefined,
 			begin: a['life-span']?.begin ?? undefined,
 			end: a['life-span']?.end ?? undefined,
-			genres: a.genres
+			genres: a.genres,
+			...(relations && {
+				wikidata: wikidataUrl?.match(/\/(Q\d+)$/)?.[1],
+				// "backward": the related artist taught this one; "forward": this one taught them.
+				teachers: teacherRels('backward'),
+				students: teacherRels('forward')
+			})
 		};
 	}
 

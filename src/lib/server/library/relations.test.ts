@@ -6,7 +6,7 @@ import { edges, entities, entityTags, externalIds, listItems } from '../db/schem
 import { setAutoTags, setManualTags, tagsFor } from '../enrich/tags';
 import { removeFromList } from './list';
 import { mergeEntities } from './merge';
-import { addEdge, createStub, removeEdge, searchEntities, setEdgeStatus } from './relations';
+import { addEdge, createStub, removeEdge, searchEntities } from './relations';
 
 function setup() {
 	const db = openDb(':memory:');
@@ -46,7 +46,7 @@ describe('edges', () => {
 		expect(addEdge(db, { type: 'inspired', from: a.id, to: 999 })).toMatchObject({ ok: false, status: 404 });
 		const e = addEdge(db, { type: 'inspired', from: a.id, to: b.id });
 		if (!e.ok) throw new Error();
-		setEdgeStatus(db, e.edge.id, 'rejected');
+		db.update(edges).set({ status: 'rejected' }).where(eq(edges.id, e.edge.id)).run();
 		expect(addEdge(db, { type: 'inspired', from: a.id, to: b.id })).toMatchObject({ ok: true, created: false, edge: { status: 'accepted' } });
 	});
 
@@ -60,7 +60,7 @@ describe('edges', () => {
 		expect(removeFromList(db, album.id).deletedEntities).toEqual([]);
 		expect(db.select().from(entities).all()).toHaveLength(2);
 		// rejected edges don't keep entities alive
-		setEdgeStatus(db, e.edge.id, 'rejected');
+		db.update(edges).set({ status: 'rejected' }).where(eq(edges.id, e.edge.id)).run();
 		expect(removeEdge(db, e.edge.id).deletedEntities.sort()).toEqual([album.id, stub.id].sort());
 	});
 });

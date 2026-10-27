@@ -9,6 +9,7 @@ import { entities, externalIds, kv, type Entity } from '../db/schema';
 import type { FetchFn } from '../providers/http';
 import type { MbArtist, MbRecording, MusicBrainzClient } from '../providers/musicbrainz';
 import type { Providers } from '../providers/resolve';
+import type { SuggestPayload } from './suggestions';
 import { addAutoTags, effectiveFor, hasManual, setAutoTags, tagsFor } from './tags';
 
 export interface EnrichPayload {
@@ -29,6 +30,8 @@ export interface EnrichDeps {
 	artworkDir: string;
 	fetchImpl?: FetchFn;
 	enqueue: (payload: EnrichPayload) => void;
+	/** Queues edge suggestions for an artist once it's enriched. */
+	suggest?: (payload: SuggestPayload) => void;
 	log?: (msg: string) => void;
 }
 
@@ -269,11 +272,19 @@ async function enrichArtist(deps: EnrichDeps, artist: Entity) {
 	}
 
 	const genres: string[] = [];
+	const suggest: SuggestPayload = { entityId: artist.id };
 	if (mbid && deps.mb) {
-		const data = await deps.mb.getArtist(mbid);
+		const data = await deps.mb.getArtist(mbid, { relations: true });
 		if (data) {
 			cacheArtist(db, data);
 			genres.push(...topGenres(data.genres));
+			if (data.wikidata) {
+				db.insert(externalIds)
+					.values({ entityId: artist.id, provider: 'wikidata', externalId: data.wikidata, url: `https://www.wikidata.org/wiki/${data.wikidata}` })
+					.onConflictDoNothing()
+					.run();
+			}
+			Object.assign(suggest, { wikidata: data.wikidata, teachers: data.teachers, students: data.students });
 		}
 	}
 	const spotifyId = externalId(db, artist.id, 'spotify');
@@ -287,6 +298,7 @@ async function enrichArtist(deps: EnrichDeps, artist: Entity) {
 	}
 	if (genres.length) setAutoTags(db, artist.id, 'genre', [...new Set(genres)]);
 	recomputeArtistEras(db, artist.id);
+	deps.suggest?.(suggest);
 }
 
 /**

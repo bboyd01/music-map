@@ -2,14 +2,14 @@
 	import TabBar from '#lib/components/TabBar.svelte';
 	import type { LayoutProps } from './$types';
 
-	let { children }: LayoutProps = $props();
+	let { children, data }: LayoutProps = $props();
 </script>
 
 <div class="shell">
 	<main>
 		{@render children()}
 	</main>
-	<TabBar />
+	<TabBar suggestionCount={data.suggestionCount} />
 </div>
 
 <style>

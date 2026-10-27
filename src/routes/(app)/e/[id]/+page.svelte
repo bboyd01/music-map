@@ -6,6 +6,7 @@
 	import ListItemSheet from '#lib/components/ListItemSheet.svelte';
 	import Sheet from '#lib/components/Sheet.svelte';
 	import Stars from '#lib/components/Stars.svelte';
+	import SuggestionList from '#lib/components/SuggestionList.svelte';
 	import TagEditor from '#lib/components/TagEditor.svelte';
 	import type { EntityDetail, RelationView } from '#lib/types.ts';
 	import type { PageProps } from './$types';
@@ -197,6 +198,13 @@
 		<p class="muted">No links yet. Add who inspired this, what it inspired, or what it sounds like.</p>
 	{/if}
 </section>
+
+{#if data.suggestions.length}
+	<section>
+		<h2>Suggestions</h2>
+		<SuggestionList suggestions={data.suggestions} viewing={e.id} />
+	</section>
+{/if}
 
 {#if e.children.length}
 	<section>

@@ -76,3 +76,12 @@ export interface FacetOption {
 	name: string;
 	count: number;
 }
+
+export interface SuggestionView {
+	edgeId: number;
+	type: 'inspired' | 'similar';
+	source: RelationView['source'];
+	createdAt: string;
+	from: EntitySummary;
+	to: EntitySummary;
+}

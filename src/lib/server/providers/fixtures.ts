@@ -62,9 +62,11 @@ export function recordingFetch(real: FetchFn = fetch) {
 				body = JSON.parse(buf.toString('utf8'));
 			} catch {}
 		}
-		if (!recorded.some((f) => f.request.url === url && (f.request.method ?? 'GET') === method)) {
-			recorded.push({ request: method === 'GET' ? { url } : { url, method }, status: res.status, headers, body });
-		}
+		// Keep the latest response per request, so a retried 503 is recorded as its eventual success.
+		const entry: Fixture = { request: method === 'GET' ? { url } : { url, method }, status: res.status, headers, body };
+		const i = recorded.findIndex((f) => f.request.url === url && (f.request.method ?? 'GET') === method);
+		if (i >= 0) recorded[i] = entry;
+		else recorded.push(entry);
 		return new Response(res.status === 204 || res.status === 304 || (res.status >= 300 && res.status < 400) ? null : buf, {
 			status: res.status,
 			headers: res.headers
