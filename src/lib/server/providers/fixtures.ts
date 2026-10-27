@@ -38,3 +38,37 @@ export function fixtureFetch(fixtures: Fixture[]) {
 	};
 	return Object.assign(fn, { calls });
 }
+
+/**
+ * Wraps a real fetch and records every exchange as a Fixture (for scripts/record-fixtures.ts).
+ * Image bodies are replaced with a placeholder; tests only need the status and content type.
+ */
+export function recordingFetch(real: FetchFn = fetch) {
+	const recorded: Fixture[] = [];
+	const fn: FetchFn = async (input, init) => {
+		const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+		const method = (init?.method ?? 'GET').toUpperCase();
+		const res = await real(input, init);
+		const type = res.headers.get('content-type') ?? '';
+		const headers: Record<string, string> = {};
+		if (type) headers['content-type'] = type;
+		const location = res.headers.get('location');
+		if (location) headers.location = location;
+		const buf = Buffer.from(await res.arrayBuffer());
+		let body: unknown = buf.toString('utf8');
+		if (type.startsWith('image/')) body = '<image>';
+		else if (type.includes('json')) {
+			try {
+				body = JSON.parse(buf.toString('utf8'));
+			} catch {}
+		}
+		if (!recorded.some((f) => f.request.url === url && (f.request.method ?? 'GET') === method)) {
+			recorded.push({ request: method === 'GET' ? { url } : { url, method }, status: res.status, headers, body });
+		}
+		return new Response(res.status === 204 || res.status === 304 || (res.status >= 300 && res.status < 400) ? null : buf, {
+			status: res.status,
+			headers: res.headers
+		});
+	};
+	return Object.assign(fn, { recorded });
+}

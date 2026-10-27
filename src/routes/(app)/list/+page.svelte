@@ -53,6 +53,22 @@
 	$effect(() => {
 		if (highlight) document.getElementById(`item-${highlight}`)?.scrollIntoView({ block: 'center' });
 	});
+
+	/** Periods (e.g. Baroque) before decades, so the more telling era survives truncation. */
+	const eraOrder = (eras: string[]) => [...eras].sort((a, b) => Number(/^\d{4}s$/.test(a)) - Number(/^\d{4}s$/.test(b)));
+
+	const enriching = (item: ListRow) => item.enrichStatus === 'pending' || item.enrichStatus === 'running';
+
+	// While anything is still being enriched, refresh every few seconds (stops after ~3 minutes).
+	let polls = 0;
+	$effect(() => {
+		if (!data.items.some(enriching) || polls > 70) return;
+		const t = setTimeout(() => {
+			polls++;
+			invalidate('app:list');
+		}, 2500);
+		return () => clearTimeout(t);
+	});
 </script>
 
 <svelte:head>
@@ -95,6 +111,24 @@
 				<option value="year">Release year</option>
 			</select>
 		</label>
+		{#if data.options.genre.length || query.genre}
+			<label>
+				<span class="visually-hidden">Genre</span>
+				<select class="input" value={query.genre ?? ''} onchange={(e) => setParam({ genre: e.currentTarget.value || undefined })}>
+					<option value="">All genres</option>
+					{#each data.options.genre as o (o.slug)}<option value={o.slug}>{o.name} ({o.count})</option>{/each}
+				</select>
+			</label>
+		{/if}
+		{#if data.options.era.length || query.era}
+			<label>
+				<span class="visually-hidden">Era</span>
+				<select class="input" value={query.era ?? ''} onchange={(e) => setParam({ era: e.currentTarget.value || undefined })}>
+					<option value="">All eras</option>
+					{#each data.options.era as o (o.slug)}<option value={o.slug}>{o.name} ({o.count})</option>{/each}
+				</select>
+			</label>
+		{/if}
 		{#if query.status === 'listened'}
 			<label>
 				<span class="visually-hidden">Minimum rating</span>
@@ -111,9 +145,9 @@
 
 {#if data.items.length === 0}
 	<div class="empty">
-		{#if query.q || query.kind !== 'all' || query.minRating !== undefined}
+		{#if query.q || query.kind !== 'all' || query.minRating !== undefined || query.genre || query.era}
 			<p>Nothing matches these filters.</p>
-			<a class="btn" href={href({ q: undefined, kind: undefined, minRating: undefined })}>Clear filters</a>
+			<a class="btn" href={href({ q: undefined, kind: undefined, minRating: undefined, genre: undefined, era: undefined })}>Clear filters</a>
 		{:else if query.status === 'to_listen'}
 			<p>Nothing to listen to yet.</p>
 			<a class="btn btn-primary" href="/add">Add music</a>
@@ -134,6 +168,13 @@
 							{#if item.kind === 'track'}<span class="badge">Track</span>{item.albumName ? ` ${item.albumName}` : ''}{/if}
 							{#if item.status === 'listened'}<Stars rating={item.rating} />{/if}
 						</span>
+						{#if item.genres.length || item.eras.length || enriching(item)}
+							<span class="tagline"
+								>{[...item.genres.slice(0, 2), ...eraOrder(item.eras)].join(' · ')}{#if enriching(item)}<span class="enriching"
+										>{item.genres.length || item.eras.length ? ' · ' : ''}Enriching…</span
+									>{/if}</span
+							>
+						{/if}
 					</span>
 				</button>
 				{#if item.status === 'to_listen'}
@@ -159,12 +200,11 @@
 		margin: 12px 0;
 	}
 	.row {
-		display: flex;
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
 		gap: 8px;
-		overflow-x: auto;
 	}
 	.row label {
-		flex: 1 1 0;
 		min-width: 0;
 	}
 	.row select {
@@ -221,6 +261,26 @@
 	.sub {
 		font-size: 0.875rem;
 		color: var(--muted);
+	}
+	.tagline {
+		font-size: 0.8rem;
+		color: var(--muted);
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	.enriching {
+		animation: pulse 1.4s ease-in-out infinite;
+	}
+	@keyframes pulse {
+		50% {
+			opacity: 0.4;
+		}
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.enriching {
+			animation: none;
+		}
 	}
 	.badge {
 		display: inline-block;

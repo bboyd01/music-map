@@ -1,5 +1,5 @@
 import { getDb } from '#lib/server/db/index.ts';
-import { ListQuery, getList, listCounts } from '#lib/server/library/list.ts';
+import { ListQuery, getListWithOptions, listCounts } from '#lib/server/library/list.ts';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = ({ url, depends }) => {
@@ -7,5 +7,6 @@ export const load: PageServerLoad = ({ url, depends }) => {
 	const parsed = ListQuery.safeParse(Object.fromEntries(url.searchParams));
 	const query = parsed.success ? parsed.data : ListQuery.parse({});
 	const db = getDb();
-	return { query, items: getList(db, query), counts: listCounts(db) };
+	const { items, options } = getListWithOptions(db, query);
+	return { query, items, options, counts: listCounts(db) };
 };

@@ -2,7 +2,8 @@
 	import Artwork from './Artwork.svelte';
 	import Sheet from './Sheet.svelte';
 	import StarInput from './StarInput.svelte';
-	import type { ListRow } from '../types';
+	import TagEditor from './TagEditor.svelte';
+	import type { EntityView, ListRow } from '../types';
 
 	let {
 		open = $bindable(false),
@@ -22,6 +23,30 @@
 	let listenedAt = $state('');
 	let saving = $state(false);
 	let errorMessage = $state('');
+	let entity = $state<EntityView | null>(null);
+
+	async function loadEntity(id: number) {
+		const res = await fetch(`/api/entities/${id}`).catch(() => null);
+		if (res?.ok && item?.id === id) entity = (await res.json()).entity;
+	}
+
+	// Poll while enrichment is in progress so tags appear without a reload.
+	$effect(() => {
+		if (!open || !entity || (entity.enrichStatus !== 'pending' && entity.enrichStatus !== 'running')) return;
+		const id = entity.id;
+		const t = setTimeout(() => loadEntity(id), 2000);
+		return () => clearTimeout(t);
+	});
+
+	async function refreshDetails() {
+		await fetch(`/api/entities/${item!.id}/enrich`, { method: 'POST' }).catch(() => null);
+		await loadEntity(item!.id);
+	}
+
+	function onTagsChanged(next: EntityView) {
+		entity = next;
+		onchange();
+	}
 
 	// Reset the form whenever a different item (or mode) is opened.
 	$effect(() => {
@@ -31,6 +56,8 @@
 		review = item.review ?? '';
 		listenedAt = item.listenedAt ?? (markListened ? localToday() : '');
 		errorMessage = '';
+		entity = null;
+		if (!markListened) loadEntity(item.id);
 	});
 
 	async function request(method: string, body?: unknown) {
@@ -116,6 +143,32 @@
 				{/if}
 			</div>
 		</form>
+
+		{#if !markListened}
+			<section class="tags" aria-label="Tags">
+				<div class="tags-head">
+					<h3>Tags</h3>
+					{#if entity?.enrichStatus === 'pending' || entity?.enrichStatus === 'running'}
+						<span class="muted status">Fetching details…</span>
+					{:else if entity?.enrichStatus === 'failed'}
+						<span class="muted status">Couldn't fetch details.</span>
+					{/if}
+					{#if entity && entity.enrichStatus !== 'pending' && entity.enrichStatus !== 'running'}
+						<button type="button" class="link" onclick={refreshDetails}>
+							{entity.enrichStatus === 'failed' ? 'Retry' : 'Refresh'}
+						</button>
+					{/if}
+				</div>
+				{#if entity}
+					<TagEditor entityId={entity.id} facet="genre" label="Genre" view={entity.tags.genre} onchange={onTagsChanged} />
+					<TagEditor entityId={entity.id} facet="era" label="Era" view={entity.tags.era} onchange={onTagsChanged} />
+					<TagEditor entityId={entity.id} facet="instrument" label="Instruments" view={entity.tags.instrument} onchange={onTagsChanged} />
+					<p class="muted hint">Tag changes save right away and are never overwritten by automatic updates.</p>
+				{:else}
+					<p class="muted">Loading…</p>
+				{/if}
+			</section>
+		{/if}
 	{/if}
 </Sheet>
 
@@ -168,5 +221,38 @@
 	.error {
 		margin: 0;
 		color: var(--danger);
+	}
+	.tags {
+		display: flex;
+		flex-direction: column;
+		gap: 16px;
+		margin-top: 24px;
+		padding-top: 16px;
+		border-top: 1px solid var(--border);
+	}
+	.tags-head {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+	}
+	.tags-head h3 {
+		margin: 0;
+		font-size: 1rem;
+	}
+	.status {
+		font-size: 0.85rem;
+	}
+	.tags-head .link {
+		margin-left: auto;
+		min-height: 32px;
+		border: none;
+		background: none;
+		color: var(--accent);
+		font-weight: 600;
+		cursor: pointer;
+	}
+	.hint {
+		margin: 0;
+		font-size: 0.8rem;
 	}
 </style>

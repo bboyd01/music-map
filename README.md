@@ -15,7 +15,7 @@ one `/data` volume.
 | `SESSION_SECRET` | yes | Random string, 32+ chars (`openssl rand -hex 32`). Keys the stored session-token hashes. |
 | `DATA_DIR` | no | Where the DB and artwork live. Default `./data`, `/data` in Docker. |
 | `TRUST_PROXY` | no | `true` when behind a reverse proxy, so login rate limiting uses the client IP from `X-Forwarded-For`. Leave it off if the app is directly reachable, or clients can spoof their IP. |
-| `MB_USER_AGENT` | for enrichment | Sent to MusicBrainz, e.g. `MusicMap/1.0 (you@example.com)`. |
+| `MB_USER_AGENT` | for enrichment | Sent with every MusicBrainz request, e.g. `MusicMap/1.0 (you@example.com)`. MusicBrainz requires contact info. Without it, items only get the provider's genre and a decade tag. |
 | `SPOTIFY_CLIENT_ID` / `SPOTIFY_CLIENT_SECRET` | no | Enables Spotify links and search. |
 | `LASTFM_API_KEY` | no | Enables Last.fm "similar" suggestions. |
 | `PORT` | no | Default `3000`. |
@@ -92,11 +92,29 @@ npx tsx scripts/resolve-link.ts --track 'so what miles davis'
 
 # Re-record test fixtures from the live APIs (tests themselves never call live APIs)
 npx tsx scripts/record-fixtures.ts apple
+npx tsx scripts/record-fixtures.ts enrich      # full add + MusicBrainz enrichment flow
 SPOTIFY_CLIENT_ID=… SPOTIFY_CLIENT_SECRET=… npx tsx scripts/record-fixtures.ts spotify
 ```
 
 The Spotify fixtures are currently hand-written from the API reference (each entry has a `note`
 saying so). Re-record them once you have credentials.
+
+## Enrichment
+
+Adding an item returns right away; a background job (SQLite `jobs` table, one in-process worker)
+then fills in details:
+
+- **MusicBrainz match** (1 request/second, always with `MB_USER_AGENT`): the album's release
+  group, matched conservatively by title, artist and year. Below the confidence threshold it stays
+  unmatched rather than guessing.
+- **Genres** from MusicBrainz votes plus the provider's genre; **decade** from the release date;
+  for classical music, also the **composer's period** (e.g. Baroque) from their lifespan.
+- **Instruments** from MusicBrainz performer credits (track → album → artist). Coverage is sparse.
+- **Artwork fallback** from the Cover Art Archive.
+
+Tags are inherited: a track without its own genre shows its album's, then its artist's. Editing a
+tag facet makes it yours; re-enrichment never touches it. Jobs retry up to 3 times with backoff and
+resume after a restart; a failed enrichment never affects the item itself.
 
 ## Security notes
 

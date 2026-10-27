@@ -3,6 +3,7 @@ import {
 	type AnySQLiteColumn,
 	index,
 	integer,
+	primaryKey,
 	sqliteTable,
 	text,
 	uniqueIndex
@@ -66,6 +67,46 @@ export const listItems = sqliteTable(
 	(t) => [index('listen_items_status').on(t.status)]
 );
 
+export const tags = sqliteTable(
+	'tags',
+	{
+		id: integer('id').primaryKey({ autoIncrement: true }),
+		facet: text('facet', { enum: ['genre', 'era', 'instrument'] }).notNull(),
+		name: text('name').notNull(),
+		slug: text('slug').notNull()
+	},
+	(t) => [uniqueIndex('tags_facet_slug').on(t.facet, t.slug)]
+);
+
+export const entityTags = sqliteTable(
+	'entity_tags',
+	{
+		entityId: integer('entity_id')
+			.notNull()
+			.references(() => entities.id, { onDelete: 'cascade' }),
+		tagId: integer('tag_id')
+			.notNull()
+			.references(() => tags.id, { onDelete: 'cascade' }),
+		source: text('source', { enum: ['auto', 'manual'] }).notNull()
+	},
+	(t) => [primaryKey({ columns: [t.entityId, t.tagId] }), index('entity_tags_tag').on(t.tagId)]
+);
+
+export const jobs = sqliteTable(
+	'jobs',
+	{
+		id: integer('id').primaryKey({ autoIncrement: true }),
+		type: text('type', { enum: ['enrich', 'suggest', 'artwork'] }).notNull(),
+		payload: text('payload', { mode: 'json' }).notNull().$type<Record<string, unknown>>(),
+		status: text('status', { enum: ['queued', 'running', 'done', 'failed'] }).notNull().default('queued'),
+		attempts: integer('attempts').notNull().default(0),
+		runAfter: text('run_after').notNull().default(now),
+		lastError: text('last_error'),
+		createdAt: text('created_at').notNull().default(now)
+	},
+	(t) => [index('jobs_status_run_after').on(t.status, t.runAfter)]
+);
+
 export const sessions = sqliteTable('sessions', {
 	idHash: text('id_hash').primaryKey(),
 	createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
@@ -80,3 +121,5 @@ export const kv = sqliteTable('kv', {
 
 export type Entity = typeof entities.$inferSelect;
 export type ListItem = typeof listItems.$inferSelect;
+export type Tag = typeof tags.$inferSelect;
+export type Job = typeof jobs.$inferSelect;

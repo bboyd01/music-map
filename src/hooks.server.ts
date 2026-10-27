@@ -5,10 +5,12 @@ import { getDb } from '#lib/server/db/index.ts';
 import { authenticate } from '#lib/server/auth/index.ts';
 import { isApiLike, isPublicPath } from '#lib/server/auth/access.ts';
 import { deleteExpiredSessions } from '#lib/server/auth/session.ts';
+import { startEnrichment } from '#lib/server/enrich/index.ts';
 
 export const init: ServerInit = () => {
 	// Opening the DB runs pending migrations.
 	deleteExpiredSessions(getDb());
+	startEnrichment();
 };
 
 const SECURITY_HEADERS: Record<string, string> = {

@@ -6,6 +6,7 @@ import { entities, externalIds, listItems } from '../db/schema';
 import type { FetchFn } from '../providers/http';
 import { resolveInput, type Providers } from '../providers/resolve';
 import { ProviderError, type ListKind, type ProviderName, type ProviderRef, type SearchResult } from '../providers/types';
+import type { EnrichPayload } from '../enrich/pipeline';
 import { addItemToLibrary, type AddOutcome } from './add';
 
 export interface LibraryDeps {
@@ -14,6 +15,8 @@ export interface LibraryDeps {
 	artworkDir: string;
 	fetchImpl?: FetchFn;
 	log?: (msg: string) => void;
+	/** Queues background enrichment for a newly added/updated entity. */
+	enqueueEnrich?: (payload: EnrichPayload) => void;
 }
 
 const LABEL: Record<ProviderName, string> = { apple: 'Apple Music', spotify: 'Spotify' };
@@ -123,6 +126,7 @@ export async function commitAdd(deps: LibraryDeps, ref: ProviderRef & { kind: Li
 
 	const result = addItemToLibrary(deps.db, item);
 
+	let artworkFailed = false;
 	if (item.artworkUrl && result.artworkTargets.length) {
 		try {
 			const file = await downloadArtwork(item.artworkUrl, deps.artworkDir, { fetchImpl: deps.fetchImpl });
@@ -132,8 +136,19 @@ export async function commitAdd(deps: LibraryDeps, ref: ProviderRef & { kind: Li
 				.where(inArray(entities.id, result.artworkTargets))
 				.run();
 		} catch (err) {
+			artworkFailed = true;
 			deps.log?.(`artwork failed for entity ${result.entityId}: ${err}`);
 		}
+	}
+
+	if (result.outcome !== 'existing' || result.attachedProvider) {
+		deps.enqueueEnrich?.({
+			entityId: result.entityId,
+			providerGenres: item.genres,
+			isrc: item.kind === 'track' ? item.isrc : undefined,
+			upc: item.kind === 'album' ? item.upc : undefined,
+			artworkUrl: artworkFailed ? item.artworkUrl : undefined
+		});
 	}
 
 	const listStatus =

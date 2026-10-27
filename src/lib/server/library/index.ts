@@ -1,4 +1,5 @@
 import { artworkDir, getDb } from '../db/index.ts';
+import { enrichment } from '../enrich/index.ts';
 import { getProviders } from '../providers/index.ts';
 import type { LibraryDeps } from './service';
 
@@ -7,6 +8,7 @@ export function libraryDeps(): LibraryDeps {
 		db: getDb(),
 		providers: getProviders(),
 		artworkDir,
-		log: (msg) => console.warn(`[library] ${msg}`)
+		log: (msg) => console.warn(`[library] ${msg}`),
+		enqueueEnrich: enrichment().enqueue
 	};
 }

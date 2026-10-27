@@ -6,7 +6,36 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { FIXTURE_DIR, type Fixture } from '../src/lib/server/providers/fixtures.ts';
+import os from 'node:os';
+import { openDb } from '../src/lib/server/db/client.ts';
+import { createEnrichment } from '../src/lib/server/enrich/runner.ts';
+import { commitAdd } from '../src/lib/server/library/service.ts';
+import { AppleProvider } from '../src/lib/server/providers/apple.ts';
+import { FIXTURE_DIR, recordingFetch, type Fixture } from '../src/lib/server/providers/fixtures.ts';
+import { MusicBrainzClient } from '../src/lib/server/providers/musicbrainz.ts';
+
+export const ENRICH_ADDS = [
+	{ provider: 'apple', kind: 'album', id: '268443092', country: 'us' }, // Kind of Blue
+	{ provider: 'apple', kind: 'track', id: '268443097', country: 'us' }, // So What
+	{ provider: 'apple', kind: 'album', id: '476935391', country: 'us' } // Gould: Goldberg Variations (1981)
+] as const;
+export const MB_USER_AGENT = 'MusicMap/0.1 (https://github.com/bboyd01/music-map)';
+
+/** Runs the real add + enrichment flow and records every request it makes. */
+async function recordEnrichment() {
+	const fetchImpl = recordingFetch();
+	const db = openDb(':memory:');
+	const artworkDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mm-record-'));
+	const providers = { apple: new AppleProvider({ fetchImpl }), spotify: null };
+	const mb = new MusicBrainzClient({ userAgent: MB_USER_AGENT, fetchImpl });
+	const { worker, enqueue } = createEnrichment({ db, mb, providers, artworkDir, fetchImpl, log: console.log });
+	for (const ref of ENRICH_ADDS) {
+		console.log(await commitAdd({ db, providers, artworkDir, fetchImpl, enqueueEnrich: enqueue }, ref));
+		console.log('jobs run:', await worker.drain());
+	}
+	fs.writeFileSync(path.join(FIXTURE_DIR, 'enrich.json'), JSON.stringify(fetchImpl.recorded, null, '\t') + '\n');
+	console.log(`recorded ${fetchImpl.recorded.length} exchanges`);
+}
 
 const APPLE = 'https://itunes.apple.com';
 const SPOTIFY = 'https://api.spotify.com/v1';
@@ -51,8 +80,12 @@ async function spotifyToken() {
 }
 
 const which = process.argv[2];
+if (which === 'enrich') {
+	await recordEnrichment();
+	process.exit(0);
+}
 if (!which || !(which in sets)) {
-	console.error(`Usage: record-fixtures.ts <${Object.keys(sets).join('|')}>`);
+	console.error(`Usage: record-fixtures.ts <${Object.keys(sets).join('|')}|enrich>`);
 	process.exit(1);
 }
 const headers: Record<string, string> = which === 'spotify' ? { authorization: `Bearer ${await spotifyToken()}` } : {};
