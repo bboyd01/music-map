@@ -21,6 +21,8 @@
 		"@sveltejs/vite-plugin-svelte": "^7.2.0",
 		"@types/better-sqlite3": "^9.6.0",
 		"@types/node": "^26.6.5",
+		"cytoscape": "^3.34.4",
+		"cytoscape-fcose": "^2.2.0",
 		"drizzle-kit": "^0.31.11",
 		"svelte": "^5.57.1",
 		"svelte-check": "^4.6.0",

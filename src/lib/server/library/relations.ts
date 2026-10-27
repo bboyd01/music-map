@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { canonicalEdge } from '../../domain/edges';
 import { normKey } from '../../domain/normalize';
 import { escapeLike, type DbOrTx } from '../db/client';
-import { edges, entities, listItems, type Edge, type Entity } from '../db/schema';
+import { edges, entities, type Edge, type Entity } from '../db/schema';
 import type { EntitySummary } from '../../types';
 import { collectGarbage, ensureEntity } from './entities';
 
@@ -90,6 +90,15 @@ export function createStub(db: DbOrTx, input: z.infer<typeof StubInput>): { enti
 	return { entity, created };
 }
 
+/**
+ * "In your library": the entity, or (for artists and albums) one of its tracks/releases, is on the
+ * listening list. Everything else is a stub. Artists never have list items of their own.
+ */
+export const listedSql = sql<number>`exists (
+	select 1 from listen_items li join entities c on c.id = li.entity_id
+	where c.id = ${entities.id} or c.artist_id = ${entities.id} or c.album_id = ${entities.id}
+)`;
+
 const artist = alias(entities, 'artist');
 const album = alias(entities, 'album');
 
@@ -101,12 +110,11 @@ function summaryQuery(db: DbOrTx) {
 			name: entities.name,
 			artistName: artist.name,
 			artworkPath: sql<string | null>`coalesce(${entities.artworkPath}, ${album.artworkPath})`,
-			listed: sql<number>`${listItems.entityId} is not null`
+			listed: listedSql
 		})
 		.from(entities)
 		.leftJoin(artist, eq(artist.id, entities.artistId))
-		.leftJoin(album, eq(album.id, entities.albumId))
-		.leftJoin(listItems, eq(listItems.entityId, entities.id));
+		.leftJoin(album, eq(album.id, entities.albumId));
 }
 
 const toSummary = (r: Omit<EntitySummary, 'listed'> & { listed: number }): EntitySummary => ({ ...r, listed: Boolean(r.listed) });
@@ -129,7 +137,7 @@ export function searchEntities(db: DbOrTx, q: string, kind?: Entity['kind'], lim
 				or(sql`${entities.name} like ${contains} escape '\\'`, sql`${artist.name} like ${contains} escape '\\'`)
 			)
 		)
-		.orderBy(sql`${entities.name} like ${prefix} escape '\\' desc`, sql`${listItems.entityId} is null`, entities.name)
+		.orderBy(sql`${entities.name} like ${prefix} escape '\\' desc`, sql`${listedSql} desc`, entities.name)
 		.limit(limit)
 		.all()
 		.map(toSummary);
