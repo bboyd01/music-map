@@ -5,12 +5,15 @@ import { getDb } from '#lib/server/db/index.ts';
 import { authenticate } from '#lib/server/auth/index.ts';
 import { isApiLike, isPublicPath } from '#lib/server/auth/access.ts';
 import { deleteExpiredSessions } from '#lib/server/auth/session.ts';
-import { startEnrichment } from '#lib/server/enrich/index.ts';
+import { enrichment, startEnrichment } from '#lib/server/enrich/index.ts';
 
 export const init: ServerInit = () => {
 	// Opening the DB runs pending migrations.
 	deleteExpiredSessions(getDb());
 	startEnrichment();
+	// adapter-node emits this after the HTTP server closes (SIGTERM/SIGINT). Stopping the worker
+	// lets the process exit instead of waiting for Docker to kill it.
+	process.once('sveltekit:shutdown' as never, () => void enrichment().worker.stop());
 };
 
 const SECURITY_HEADERS: Record<string, string> = {

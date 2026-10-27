@@ -24,3 +24,6 @@ vite.config.ts.timestamp-*
 
 # Local data
 /data
+
+# Local compose tweaks (e.g. publishing a host port)
+docker-compose.override.yml

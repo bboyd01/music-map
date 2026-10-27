@@ -6,7 +6,11 @@
 # With automatic HTTPS from the bundled Caddy (needs ports 80/443 and DNS for your domain):
 #   docker compose --profile caddy up -d --build
 #
-# Settings live in .env, so this file shouldn't need editing.
+# On Coolify (or behind any proxy on the same Docker network), no host port is needed: point the
+# proxy at port 3000 of this service. To publish a host port for a proxy running on the host
+# itself, see README → "Your own reverse proxy".
+#
+# Settings live in .env (or the platform's environment settings), so this file shouldn't need editing.
 
 services:
   music-map:
@@ -24,9 +28,9 @@ services:
       SPOTIFY_CLIENT_ID: ${SPOTIFY_CLIENT_ID:-}
       SPOTIFY_CLIENT_SECRET: ${SPOTIFY_CLIENT_SECRET:-}
       LASTFM_API_KEY: ${LASTFM_API_KEY:-}
-    ports:
-      # Only reachable from this machine; put a TLS reverse proxy in front (or use the caddy profile).
-      - "127.0.0.1:${HOST_PORT:-3000}:3000"
+    # Reachable on the Docker network only (Caddy, Coolify/Traefik). No host port, so nothing to clash with.
+    expose:
+      - "3000"
     volumes:
       - music-map-data:/data
 

@@ -63,6 +63,8 @@ they survive container recreation. The container runs as the non-root `node` use
 
 ### HTTPS
 
+The app itself only listens on the Docker network (port 3000, no host port), so pick one of:
+
 **Option A: bundled Caddy.** Point your domain's DNS at the server, open ports 80 and 443, set
 `ORIGIN=https://your.domain` in `.env`, then:
 
@@ -72,12 +74,41 @@ docker compose --profile caddy up -d
 
 Caddy gets and renews the certificate automatically and proxies to the app.
 
-**Option B: your own reverse proxy** (Traefik, nginx, Coolify, Cloudflare Tunnel, …). Without the
-profile, the app listens on `127.0.0.1:3000` only (`HOST_PORT` changes the port). Point the proxy at
-it, keep `TRUST_PROXY=true`, and set `ORIGIN` to the public https URL. The proxy must append the
-client address to `X-Forwarded-For`; Caddy, Traefik and nginx (`proxy_add_x_forwarded_for`) all do.
+**Option B: Coolify.** Create a *Docker Compose* resource from this repository, then:
 
-**Trying it locally over plain http:** set `ORIGIN=http://localhost:3000` and open that URL.
+1. On the `music-map` service, set **Domains** to `https://your.domain:3000`. The `:3000` is the
+   container port Coolify routes to; visitors use plain `https://your.domain`.
+2. Under **Environment Variables**, set `ORIGIN=https://your.domain` (no `:3000`),
+   `APP_PASSWORD_HASH`, `SESSION_SECRET` and `MB_USER_AGENT`. Don't enable the `caddy` profile;
+   Coolify's proxy already handles HTTPS.
+3. Deploy. If the container keeps restarting, its logs name the setting that's missing or invalid.
+
+If the domain is behind Cloudflare's proxy and shows **error 526**, Cloudflare couldn't validate
+the certificate on your server. That's expected while the app isn't running (Coolify then serves a
+fallback certificate) and clears once the app is up and Coolify has issued its Let's Encrypt
+certificate. If it persists, switch Cloudflare's SSL/TLS mode to *Full* until Coolify shows a valid
+certificate, then back to *Full (strict)*.
+
+**Option C: your own reverse proxy on the host** (nginx, Traefik, …). Publish a port for it with a
+`docker-compose.override.yml` next to the compose file (git ignores it; Compose loads it
+automatically):
+
+```yaml
+services:
+  music-map:
+    ports:
+      - "127.0.0.1:3000:3000"
+```
+
+Point the proxy at `127.0.0.1:3000`, keep `TRUST_PROXY=true`, and set `ORIGIN` to the public https
+URL. The proxy must append the client address to `X-Forwarded-For`; Caddy, Traefik and nginx
+(`proxy_add_x_forwarded_for`) all do.
+
+**Trying it locally over plain http:** add the override above, set `ORIGIN=http://localhost:3000`,
+and open that URL.
+
+`ORIGIN` may be given with or without `https://` (a bare domain means https). Values pasted with
+surrounding quotes or spaces are accepted.
 
 ### Backups
 
