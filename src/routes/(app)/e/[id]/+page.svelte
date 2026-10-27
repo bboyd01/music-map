@@ -31,7 +31,7 @@
 	let markListened = $state(false);
 	const listItem = $derived(
 		e.listItem
-			? { id: e.id, name: e.name, artistName: e.artist?.name ?? null, artworkPath: e.artworkPath, ...e.listItem }
+			? { id: e.id, name: e.name, artistName: e.artist ? [e.artist, ...e.coArtists].map((a) => a.name).join(', ') : null, artworkPath: e.artworkPath, ...e.listItem }
 			: null
 	);
 	function openList(listen: boolean) {
@@ -102,7 +102,7 @@
 		<span class="kind">{e.kind}{e.listItem ? '' : ' · not in list'}</span>
 		<h1>{e.name}</h1>
 		<p class="muted">
-			{#if e.artist}<a href="/e/{e.artist.id}">{e.artist.name}</a>{/if}
+			{#if e.artist}<a href="/e/{e.artist.id}">{e.artist.name}</a>{#each e.coArtists as a (a.id)}, <a href="/e/{a.id}">{a.name}</a>{/each}{/if}
 			{#if e.album}{e.artist ? ' · ' : ''}<a href="/e/{e.album.id}">{e.album.name}</a>{/if}
 			{#if year}{e.artist || e.album ? ' · ' : ''}{year}{/if}
 		</p>

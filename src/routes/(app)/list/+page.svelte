@@ -330,9 +330,14 @@
 	@media (min-width: 768px) {
 		.filters {
 			flex-direction: row;
+			flex-wrap: wrap;
 		}
 		.search {
-			flex: 1;
+			flex: 1 1 240px;
+		}
+		.row {
+			flex: 3 1 480px;
+			grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
 		}
 	}
 </style>

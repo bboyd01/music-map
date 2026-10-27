@@ -11,9 +11,9 @@
 	const g = $derived(data.graph);
 
 	const KINDS = [
-		{ value: 'artist', label: 'Artists' },
 		{ value: 'album', label: 'Albums' },
-		{ value: 'track', label: 'Tracks' }
+		{ value: 'track', label: 'Tracks' },
+		{ value: 'artist', label: 'Artists' }
 	] as const;
 	const LAYER_LABEL: Record<Layer, string> = { inspired: 'Inspired', similar: 'Similar', genre: 'Genre', era: 'Era', instrument: 'Instrument' };
 
@@ -34,6 +34,18 @@
 		set({ layers: LAYERS.filter((l) => next.includes(l)).join(',') });
 	}
 
+	/** Double-tap: entities open their page, tag hubs filter the map. */
+	function open(n: GraphNode) {
+		if (n.type === 'entity') goto(`/e/${n.entityId}`);
+		else set({ tag: `${n.facet}:${n.slug}`, focus: undefined });
+	}
+
+	// Focus the primary action so Enter opens the selection on desktop.
+	let primary = $state<HTMLElement>();
+	$effect(() => {
+		if (selected) primary?.focus({ preventScroll: true });
+	});
+
 	const tagLabel = $derived(q.tag ? `${q.tag.facet}: ${q.tag.slug.replace(/-/g, ' ')}` : '');
 </script>
 
@@ -43,7 +55,7 @@
 
 <div class="map">
 	{#if g.nodes.length}
-		<GraphView graph={g} focus={g.focus} onselect={(n) => (selected = n)} />
+		<GraphView graph={g} focus={g.focus} onselect={(n) => (selected = n)} onopen={open} />
 	{:else}
 		<div class="empty">
 			{#if q.tag}
@@ -102,7 +114,7 @@
 				</div>
 				<div class="actions">
 					<button class="btn" type="button" onclick={() => set({ focus: String(selected!.entityId) })}>Focus</button>
-					<a class="btn btn-primary" href="/e/{selected.entityId}">Open</a>
+					<a class="btn btn-primary" href="/e/{selected.entityId}" bind:this={primary}>Open</a>
 				</div>
 			{:else}
 				<div class="row-text">
@@ -110,7 +122,7 @@
 					<span class="row-sub">{selected.facet} · {selected.size} {q.kind}s</span>
 				</div>
 				<div class="actions">
-					<button class="btn btn-primary" type="button" onclick={() => set({ tag: `${selected!.facet}:${selected!.slug}`, focus: undefined })}>
+					<button class="btn btn-primary" type="button" bind:this={primary} onclick={() => open(selected!)}>
 						Only these
 					</button>
 				</div>

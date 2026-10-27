@@ -1,11 +1,13 @@
 import { and, eq, inArray, or } from 'drizzle-orm';
 import { composerPeriod, decadeForYear, isClassical } from '../../domain/eras';
 import { bestMatch, matchTitle, splitArtists } from '../../domain/matching';
-import { normalizeArtistName, normalizeTitle, releaseYear } from '../../domain/normalize';
+import { normalizeArtistName, normalizeTitle, normKey, releaseYear } from '../../domain/normalize';
 import { byFrequency, instrumentName, providerGenres, topGenres } from '../../domain/tags';
 import { downloadArtwork } from '../artwork';
-import type { DbOrTx as DB } from '../db/client';
-import { entities, externalIds, kv, type Entity } from '../db/schema';
+import type { DB as Db, DbOrTx as DB } from '../db/client';
+import { entities, entityArtists, externalIds, kv, type Entity } from '../db/schema';
+import { ensureEntity, findByExternalId, findByNormKey } from '../library/entities';
+import { mergeEntities } from '../library/merge';
 import type { FetchFn } from '../providers/http';
 import type { MbArtist, MbRecording, MusicBrainzClient } from '../providers/musicbrainz';
 import type { Providers } from '../providers/resolve';
@@ -109,12 +111,15 @@ interface ReleaseFacts {
 	composer?: MbArtist;
 	rgMbid?: string;
 	coverRelease?: string;
+	credits: MbCredit[];
 }
+
+type MbCredit = { id: string; name: string; credited: string };
 
 async function enrichRelease(deps: EnrichDeps, entity: Entity, payload: EnrichPayload) {
 	const { db } = deps;
 	const album = entity.kind === 'album' ? entity : load(db, entity.albumId);
-	const artist = load(db, entity.artistId);
+	let artist = load(db, entity.artistId);
 	// Release-level facts (genre, decade, composer era) live on the album when there is one;
 	// tracks inherit them (section 6.1). Tracks only get their own instruments.
 	const release = album ?? entity;
@@ -126,6 +131,7 @@ async function enrichRelease(deps: EnrichDeps, entity: Entity, payload: EnrichPa
 	if (decade) setAutoTags(db, release.id, 'era', [decade]);
 
 	const facts = deps.mb && artist ? await musicBrainzFacts(deps, entity, album, artist, payload) : undefined;
+	if (facts && artist) artist = applyCredits(deps, artist, [...new Set([entity.id, album?.id ?? entity.id])], facts.credits);
 
 	const genres = [...new Set([...local, ...(facts?.genres ?? [])])];
 	if (genres.length) setAutoTags(db, release.id, 'genre', genres);
@@ -234,8 +240,52 @@ async function musicBrainzFacts(
 		artistInstruments: byFrequency(artistInstruments, 6),
 		composer,
 		rgMbid,
-		coverRelease: release?.hasFrontCover ? release.id : undefined
+		coverRelease: release?.hasFrontCover ? release.id : undefined,
+		credits: rg.artists
 	};
+}
+
+/**
+ * Uses the MusicBrainz credit to split a combined artist ("Cory Wong, Metropole Orkest") into
+ * separate artists: ours becomes the credited artist it names, the others are co-credited on the
+ * release. Returns the release's primary artist afterwards.
+ */
+function applyCredits(deps: EnrichDeps, artist: Entity, releaseIds: number[], credits: MbCredit[]): Entity {
+	const unique = credits.filter((c, i) => credits.findIndex((x) => x.id === c.id) === i);
+	if (unique.length < 2) return artist;
+	const { db } = deps;
+	const names = (c: MbCredit) => [normalizeArtistName(c.name), normalizeArtistName(c.credited)];
+	const own = normalizeArtistName(artist.name);
+	let mine = unique.find((c) => names(c).includes(own));
+	let primary = artist;
+	if (!mine) {
+		const parts = splitArtists(artist.name);
+		mine = unique.find((c) => names(c).some((n) => parts.includes(n)));
+		if (!mine) return artist; // the credit doesn't look like ours: leave it alone
+		const key = normKey('artist', { name: mine.name });
+		const other = [findByExternalId(db, 'musicbrainz', mine.id), findByNormKey(db, 'artist', key)].find((e) => e && e.id !== artist.id);
+		if (other) {
+			mergeEntities(db as Db, artist.id, other.id);
+			primary = other;
+		} else {
+			db.update(entities).set({ name: mine.name, normKey: key, updatedAt: new Date().toISOString() }).where(eq(entities.id, artist.id)).run();
+			attachMbid(db, artist.id, mine.id, 'artist');
+		}
+		primary = load(db, primary.id)!;
+	}
+	for (const c of unique) {
+		if (c === mine) continue;
+		const { entity, created } = ensureEntity(db, {
+			kind: 'artist',
+			name: c.name,
+			normKey: normKey('artist', { name: c.name }),
+			external: { provider: 'musicbrainz', id: c.id, url: `${MB_URL}/artist/${c.id}` }
+		});
+		if (entity.id === primary.id) continue;
+		if (created) deps.enqueue({ entityId: entity.id });
+		for (const id of releaseIds) db.insert(entityArtists).values({ entityId: id, artistId: entity.id }).onConflictDoNothing().run();
+	}
+	return primary;
 }
 
 async function artworkFallback(deps: EnrichDeps, entity: Entity, album: Entity | undefined, payload: EnrichPayload, facts?: ReleaseFacts) {

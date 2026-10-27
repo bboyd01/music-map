@@ -1,6 +1,6 @@
 import { and, eq, ne, or } from 'drizzle-orm';
 import type { DbOrTx as DB } from '../db/client';
-import { edges, entities, externalIds, listItems, type Entity } from '../db/schema';
+import { edges, entities, entityArtists, externalIds, listItems, type Entity } from '../db/schema';
 
 type Provider = (typeof externalIds.$inferInsert)['provider'];
 type Kind = Entity['kind'];
@@ -16,7 +16,7 @@ interface EntityInput {
 	durationMs?: number | null;
 }
 
-function findByExternalId(db: DB, provider: Provider, externalId: string): Entity | undefined {
+export function findByExternalId(db: DB, provider: Provider, externalId: string): Entity | undefined {
 	return db
 		.select({ e: entities })
 		.from(externalIds)
@@ -25,7 +25,7 @@ function findByExternalId(db: DB, provider: Provider, externalId: string): Entit
 		.get()?.e;
 }
 
-function findByNormKey(db: DB, kind: Kind, normKey: string): Entity | undefined {
+export function findByNormKey(db: DB, kind: Kind, normKey: string): Entity | undefined {
 	return db
 		.select()
 		.from(entities)
@@ -82,7 +82,7 @@ export function ensureEntity(db: DB, input: EntityInput): { entity: Entity; crea
 	return { entity, created: true, attached: Boolean(input.external) };
 }
 
-/** True if anything still needs this entity: a list item, child entities, or a non-rejected edge. */
+/** True if anything still needs this entity: a list item, child or co-credited entities, or a non-rejected edge. */
 function isReferenced(db: DB, id: number): boolean {
 	if (db.select({ id: listItems.entityId }).from(listItems).where(eq(listItems.entityId, id)).get()) return true;
 	const child = db
@@ -91,6 +91,7 @@ function isReferenced(db: DB, id: number): boolean {
 		.where(or(eq(entities.artistId, id), eq(entities.albumId, id)))
 		.get();
 	if (child) return true;
+	if (db.select({ id: entityArtists.entityId }).from(entityArtists).where(eq(entityArtists.artistId, id)).get()) return true;
 	const edge = db
 		.select({ id: edges.id })
 		.from(edges)
@@ -110,9 +111,10 @@ export function collectGarbage(db: DB, id: number): number[] {
 		const current = queue.shift()!;
 		const row = db.select().from(entities).where(eq(entities.id, current)).get();
 		if (!row || isReferenced(db, current)) continue;
+		const coArtists = db.select({ id: entityArtists.artistId }).from(entityArtists).where(eq(entityArtists.entityId, current)).all();
 		db.delete(entities).where(eq(entities.id, current)).run();
 		deleted.push(current);
-		for (const parent of [row.albumId, row.artistId]) if (parent != null) queue.push(parent);
+		for (const parent of [row.albumId, row.artistId, ...coArtists.map((a) => a.id)]) if (parent != null) queue.push(parent);
 	}
 	return deleted;
 }

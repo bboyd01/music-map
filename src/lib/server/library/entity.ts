@@ -5,7 +5,7 @@ import { FACETS } from '../../domain/tags';
 import { groupRelations } from '../../domain/edges';
 import type { EntityDetail, EntityView, Facet } from '../../types';
 import type { DbOrTx } from '../db/client';
-import { edges, entities, externalIds, listItems } from '../db/schema';
+import { edges, entities, entityArtists, externalIds, listItems } from '../db/schema';
 import { recomputeArtistEras } from '../enrich/pipeline';
 import { effectiveFor, setManualTags } from '../enrich/tags';
 import { summaries } from './relations';
@@ -37,6 +37,13 @@ export function getEntityView(db: DbOrTx, id: number): EntityView | null {
 		enrichStatus: e.enrichStatus,
 		artist: e.artistId !== null ? { id: e.artistId, name: nameOf(e.artistId) ?? '' } : null,
 		album: e.albumId !== null ? { id: e.albumId, name: nameOf(e.albumId) ?? '' } : null,
+		coArtists: db
+			.select({ id: entities.id, name: entities.name })
+			.from(entityArtists)
+			.innerJoin(entities, eq(entities.id, entityArtists.artistId))
+			.where(eq(entityArtists.entityId, id))
+			.orderBy(sql`${entityArtists}.rowid`)
+			.all(),
 		externalIds: db
 			.select({ provider: externalIds.provider, id: externalIds.externalId, url: externalIds.url })
 			.from(externalIds)
@@ -97,7 +104,13 @@ export function getEntityDetail(db: DbOrTx, id: number): EntityDetail | null {
 	const childIds = db
 		.select({ id: entities.id })
 		.from(entities)
-		.where(view.kind === 'artist' ? eq(entities.artistId, id) : view.kind === 'album' ? eq(entities.albumId, id) : sql`0`)
+		.where(
+			view.kind === 'artist'
+				? or(eq(entities.artistId, id), sql`${entities.id} in (select entity_id from entity_artists where artist_id = ${id})`)
+				: view.kind === 'album'
+					? eq(entities.albumId, id)
+					: sql`0`
+		)
 		.orderBy(desc(entities.releaseDate), entities.name)
 		.limit(100)
 		.all()

@@ -1,10 +1,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { and, eq, like } from 'drizzle-orm';
+import { and, eq, like, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { canonicalEdge } from '../../domain/edges';
 import type { DB, DbOrTx } from '../db/client';
-import { edges, entities, entityTags, externalIds, kv, listItems, tags } from '../db/schema';
+import { edges, entities, entityArtists, entityTags, externalIds, kv, listItems, tags } from '../db/schema';
 import { upsertTag } from '../enrich/tags';
 
 export const SCHEMA_VERSION = 1;
@@ -17,6 +17,8 @@ const ExportedEntity = z.object({
 	normKey: z.string().min(1),
 	artistId: z.number().int().nullable(),
 	albumId: z.number().int().nullable(),
+	/** Co-credited artists (added after v1 shipped, so optional). */
+	coArtistIds: z.array(z.number().int()).default([]),
 	credit: z.string().nullable(),
 	releaseDate: z.string().nullable(),
 	durationMs: z.number().int().nullable(),
@@ -69,6 +71,10 @@ export function exportLibrary(db: DbOrTx): ExportFile {
 		tagRows.set(t.entityId, [...(tagRows.get(t.entityId) ?? []), { facet: t.facet, name: t.name, source: t.source }]);
 	}
 	const items = new Map(db.select().from(listItems).all().map((l) => [l.entityId, l]));
+	const coArtists = new Map<number, number[]>();
+	for (const c of db.select().from(entityArtists).orderBy(sql`rowid`).all()) {
+		coArtists.set(c.entityId, [...(coArtists.get(c.entityId) ?? []), c.artistId]);
+	}
 	return {
 		schemaVersion: SCHEMA_VERSION,
 		exportedAt: new Date().toISOString(),
@@ -86,6 +92,7 @@ export function exportLibrary(db: DbOrTx): ExportFile {
 					normKey: e.normKey,
 					artistId: e.artistId,
 					albumId: e.albumId,
+					coArtistIds: coArtists.get(e.id) ?? [],
 					credit: e.credit,
 					releaseDate: e.releaseDate,
 					durationMs: e.durationMs,
@@ -197,6 +204,10 @@ export function importLibrary(db: DB, data: ExportFile, artworkDir: string): Imp
 			}
 			idMap.set(e.id, id);
 
+			for (const a of e.coArtistIds) {
+				const artist = idMap.get(a);
+				if (artist !== undefined) tx.insert(entityArtists).values({ entityId: id, artistId: artist }).onConflictDoNothing().run();
+			}
 			for (const x of e.externalIds) {
 				tx.insert(externalIds).values({ entityId: id, provider: x.provider, externalId: x.id, url: x.url }).onConflictDoNothing().run();
 			}

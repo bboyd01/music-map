@@ -8,6 +8,7 @@ import { slugify } from '../../domain/tags';
 import type { FacetOption, ListRow } from '../../types';
 import { effectiveFor } from '../enrich/tags';
 import { collectGarbage } from './entities';
+import { artistNamesSql } from './relations';
 
 
 export const ListQuery = z.object({
@@ -44,7 +45,7 @@ export function getListWithOptions(
 		where.push(
 			or(
 				sql`${entities.name} like ${pattern} escape '\\'`,
-				sql`${artist.name} like ${pattern} escape '\\'`,
+				sql`${artistNamesSql(artist.name)} like ${pattern} escape '\\'`,
 				sql`${album.name} like ${pattern} escape '\\'`
 			)!
 		);
@@ -62,7 +63,7 @@ export function getListWithOptions(
 			id: entities.id,
 			kind: entities.kind,
 			name: entities.name,
-			artistName: artist.name,
+			artistName: artistNamesSql(artist.name),
 			albumName: album.name,
 			releaseDate: entities.releaseDate,
 			artworkPath: sql<string | null>`coalesce(${entities.artworkPath}, ${album.artworkPath})`,

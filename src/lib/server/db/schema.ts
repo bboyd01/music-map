@@ -35,6 +35,20 @@ export const entities = sqliteTable(
 	(t) => [index('entities_norm_key').on(t.normKey), index('entities_kind_artist').on(t.kind, t.artistId)]
 );
 
+/** Co-credited artists of an album or track, beyond its primary `artist_id`. */
+export const entityArtists = sqliteTable(
+	'entity_artists',
+	{
+		entityId: integer('entity_id')
+			.notNull()
+			.references(() => entities.id, { onDelete: 'cascade' }),
+		artistId: integer('artist_id')
+			.notNull()
+			.references(() => entities.id, { onDelete: 'cascade' })
+	},
+	(t) => [primaryKey({ columns: [t.entityId, t.artistId] }), index('entity_artists_artist').on(t.artistId)]
+);
+
 export const externalIds = sqliteTable(
 	'external_ids',
 	{
