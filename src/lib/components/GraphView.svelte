@@ -3,7 +3,12 @@
 	import type { Core, ElementDefinition, StylesheetJson } from 'cytoscape';
 	import type { Graph, GraphNode } from '../domain/graph';
 
-	let { graph, focus, onselect }: { graph: Graph; focus: number | null; onselect: (node: GraphNode | null) => void } = $props();
+	let {
+		graph,
+		focus,
+		onselect,
+		onopen
+	}: { graph: Graph; focus: number | null; onselect: (node: GraphNode | null) => void; onopen: (node: GraphNode) => void } = $props();
 
 	let container: HTMLDivElement;
 	let cy: Core | undefined = $state();
@@ -102,13 +107,22 @@
 			animate: false,
 			randomize: true,
 			quality: large ? 'draft' : 'default',
-			nodeRepulsion: () => 6500,
-			idealEdgeLength: () => 70,
-			nodeSeparation: 60,
+			// Count labels as part of each node so names don't overlap.
+			nodeDimensionsIncludeLabels: true,
+			nodeRepulsion: () => 9000,
+			idealEdgeLength: () => 90,
+			nodeSeparation: 80,
 			packComponents: true,
+			tilingPaddingVertical: 30,
+			tilingPaddingHorizontal: 30,
 			fit: true,
-			padding: 30
+			padding: 40
 		} as never).run();
+		// Fitting a handful of nodes would blow them up to max zoom.
+		if (cy.zoom() > 1.25) {
+			cy.zoom(1.25);
+			cy.center();
+		}
 		if (focus !== null) cy.center(cy.$id(`e${focus}`));
 		container.dataset.ready = String(Date.now());
 	}
@@ -131,6 +145,7 @@
 				motionBlur: false
 			});
 			cy.on('tap', 'node', (e) => onselect(e.target.data() as GraphNode));
+			cy.on('dbltap', 'node', (e) => onopen(e.target.data() as GraphNode));
 			cy.on('tap', (e) => {
 				if (e.target === cy) onselect(null);
 			});

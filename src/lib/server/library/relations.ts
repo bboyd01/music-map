@@ -1,4 +1,4 @@
-import { and, eq, inArray, or, sql } from 'drizzle-orm';
+import { and, eq, inArray, or, sql, type SQLWrapper } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/sqlite-core';
 import { z } from 'zod';
 import { canonicalEdge } from '../../domain/edges';
@@ -93,7 +93,16 @@ export function createStub(db: DbOrTx, input: z.infer<typeof StubInput>): { enti
 export const listedSql = sql<number>`exists (
 	select 1 from listen_items li join entities c on c.id = li.entity_id
 	where c.id = ${entities.id} or c.artist_id = ${entities.id} or c.album_id = ${entities.id}
+		or c.id in (select entity_id from entity_artists where artist_id = ${entities.id})
 )`;
+
+/** The primary artist's name followed by any co-credited artists: "Cory Wong, Metropole Orkest". */
+export const artistNamesSql = (primary: SQLWrapper) => sql<string | null>`${primary} || coalesce((
+	select ', ' || group_concat(name, ', ') from (
+		select a.name from entity_artists ea join entities a on a.id = ea.artist_id
+		where ea.entity_id = ${entities.id} order by ea.rowid
+	)
+), '')`;
 
 const artist = alias(entities, 'artist');
 const album = alias(entities, 'album');
@@ -104,7 +113,7 @@ function summaryQuery(db: DbOrTx) {
 			id: entities.id,
 			kind: entities.kind,
 			name: entities.name,
-			artistName: artist.name,
+			artistName: artistNamesSql(artist.name),
 			artworkPath: sql<string | null>`coalesce(${entities.artworkPath}, ${album.artworkPath})`,
 			listed: listedSql
 		})

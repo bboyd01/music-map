@@ -6,7 +6,7 @@ import type { Facet } from '../../domain/tags';
 import type { DbOrTx } from '../db/client';
 import { edges, entities } from '../db/schema';
 import { effectiveFor } from '../enrich/tags';
-import { listedSql } from './relations';
+import { artistNamesSql, listedSql } from './relations';
 
 const csv = (allowed: readonly string[]) =>
 	z
@@ -15,7 +15,7 @@ const csv = (allowed: readonly string[]) =>
 		.optional();
 
 export const GraphQuery = z.object({
-	kind: z.enum(['artist', 'album', 'track']).default('artist'),
+	kind: z.enum(['album', 'track', 'artist']).default('album'),
 	layers: csv(LAYERS).transform((l) => (l ?? ['inspired', 'similar', 'genre']) as Layer[]),
 	/** `facet:slug`, e.g. `genre:cool-jazz`. */
 	tag: z
@@ -45,7 +45,7 @@ export function getGraph(db: DbOrTx, q: GraphQuery): Graph {
 			id: entities.id,
 			name: entities.name,
 			kind: entities.kind,
-			artistName: artist.name,
+			artistName: artistNamesSql(artist.name),
 			artworkPath: sql<string | null>`coalesce(${entities.artworkPath}, ${album.artworkPath})`,
 			listed: listedSql
 		})

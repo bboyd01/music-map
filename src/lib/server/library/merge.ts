@@ -1,7 +1,7 @@
-import { and, eq, or } from 'drizzle-orm';
+import { and, eq, or, sql } from 'drizzle-orm';
 import { canonicalEdge } from '../../domain/edges';
 import type { DB } from '../db/client';
-import { edges, entities, entityTags, externalIds, listItems, tags } from '../db/schema';
+import { edges, entities, entityArtists, entityTags, externalIds, listItems, tags } from '../db/schema';
 
 const STATUS_RANK = { rejected: 0, suggested: 1, accepted: 2 } as const;
 
@@ -73,6 +73,12 @@ export function mergeEntities(db: DB, sourceId: number, targetId: number): Merge
 		}
 
 		tx.update(entities).set({ artistId: targetId }).where(eq(entities.artistId, sourceId)).run();
+		for (const col of [entityArtists.entityId, entityArtists.artistId]) {
+			for (const row of tx.select().from(entityArtists).where(eq(col, sourceId)).all()) {
+				const moved = { entityId: row.entityId === sourceId ? targetId : row.entityId, artistId: row.artistId === sourceId ? targetId : row.artistId };
+				tx.insert(entityArtists).values(moved).onConflictDoNothing().run();
+			}
+		}
 		tx.update(entities).set({ albumId: targetId }).where(eq(entities.albumId, sourceId)).run();
 
 		tx.update(entities)
@@ -88,6 +94,10 @@ export function mergeEntities(db: DB, sourceId: number, targetId: number): Merge
 			.where(eq(entities.id, targetId))
 			.run();
 		tx.delete(entities).where(eq(entities.id, sourceId)).run();
+		// A co-credit that now duplicates the primary artist is redundant.
+		tx.delete(entityArtists)
+			.where(sql`${entityArtists.artistId} = (select artist_id from entities where id = ${entityArtists.entityId})`)
+			.run();
 		return { ok: true, id: targetId };
 	});
 }

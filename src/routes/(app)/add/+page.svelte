@@ -37,10 +37,15 @@
 	const detailHref = (a: Added) => `/e/${a.entityId}`;
 	const sourceLabel = { apple: 'Apple Music', spotify: 'Spotify' };
 
+	let seq = 0;
+	let searchTimer: ReturnType<typeof setTimeout>;
+
 	async function submit(e?: SubmitEvent) {
 		e?.preventDefault();
+		clearTimeout(searchTimer);
 		const value = input.trim();
-		if (!value || busy) return;
+		if (!value) return;
+		const mine = ++seq;
 		busy = true;
 		errorMessage = '';
 		warnings = [];
@@ -50,6 +55,7 @@
 				| { type: 'item'; ref: Ref; name: string }
 				| { type: 'results'; query: string; results: Result[]; warnings: string[] }
 			>('/api/add/resolve', { body: { input: value, kind } });
+			if (mine !== seq) return; // A newer search superseded this one.
 			if (r.type === 'item') {
 				results = null;
 				added = await api<Added>('/api/add/commit', { body: r.ref });
@@ -60,10 +66,18 @@
 				lastQuery = r.query;
 			}
 		} catch (err) {
-			errorMessage = (err as Error).message;
+			if (mine === seq) errorMessage = (err as Error).message;
 		} finally {
-			busy = false;
+			if (mine === seq) busy = false;
 		}
+	}
+
+	/** Search as you type, once typing pauses. Links wait for paste or Enter. */
+	function oninput() {
+		clearTimeout(searchTimer);
+		const value = input.trim();
+		if (value.length < 2 || looksLikeLink(value)) return;
+		searchTimer = setTimeout(submit, 300);
 	}
 
 	async function addResult(r: Result) {
@@ -126,9 +140,10 @@
 			spellcheck="false"
 			placeholder="Paste a link or search"
 			bind:value={input}
+			{oninput}
 			{onpaste}
 		/>
-		<button class="btn btn-primary" type="submit" disabled={busy || !input.trim()}>
+		<button class="btn btn-primary" type="submit" disabled={!input.trim()}>
 			{busy ? '…' : looksLikeLink(input) ? 'Add' : 'Search'}
 		</button>
 	</div>

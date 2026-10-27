@@ -113,7 +113,8 @@
 			{#if errorMessage}<p class="error" role="alert">{errorMessage}</p>{/if}
 
 			<div class="actions">
-				<button class="btn btn-primary" type="submit" disabled={saving}>{saving ? 'Saving…' : 'Save'}</button>
+				<!-- svelte-ignore a11y_autofocus -- Enter should save, not hit the close button. -->
+				<button class="btn btn-primary" type="submit" disabled={saving} autofocus>{saving ? 'Saving…' : 'Save'}</button>
 				{#if !markListened}
 					<button class="btn btn-danger" type="button" disabled={saving} onclick={remove}>Remove</button>
 				{/if}

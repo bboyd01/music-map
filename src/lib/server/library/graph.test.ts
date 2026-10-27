@@ -53,7 +53,7 @@ describe('getGraph', () => {
 	});
 
 	it('parses query defaults and rejects junk', () => {
-		expect(q({})).toMatchObject({ kind: 'artist', layers: ['inspired', 'similar', 'genre'], depth: 2, suggested: false });
+		expect(q({})).toMatchObject({ kind: 'album', layers: ['inspired', 'similar', 'genre'], depth: 2, suggested: false });
 		expect(q({ layers: 'era,bogus', tag: 'genre:cool-jazz', suggested: '1' })).toMatchObject({
 			layers: ['era'],
 			tag: { facet: 'genre', slug: 'cool-jazz' },

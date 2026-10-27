@@ -43,6 +43,8 @@ export interface EntityView {
 	artworkPath: string | null;
 	enrichStatus: 'pending' | 'running' | 'done' | 'failed';
 	artist: { id: number; name: string } | null;
+	/** Co-credited artists beyond the primary one. */
+	coArtists: { id: number; name: string }[];
 	album: { id: number; name: string } | null;
 	externalIds: { provider: string; id: string; url: string | null }[];
 	tags: Record<Facet, FacetView>;
