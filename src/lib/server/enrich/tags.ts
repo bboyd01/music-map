@@ -5,7 +5,7 @@ import { cleanTagName, slugify, type Facet } from '../../domain/tags';
 import { escapeLike, type DbOrTx } from '../db/client';
 import { entities, entityTags, tags } from '../db/schema';
 
-function upsertTag(db: DbOrTx, facet: Facet, rawName: string): number | null {
+export function upsertTag(db: DbOrTx, facet: Facet, rawName: string): number | null {
 	const name = cleanTagName(facet, rawName);
 	const slug = slugify(name);
 	if (!slug) return null;

@@ -11,7 +11,8 @@ RUN npm run build && npm prune --omit=dev
 FROM node:22-slim
 ENV NODE_ENV=production \
 	DATA_DIR=/data \
-	PORT=3000
+	PORT=3000 \
+	BODY_SIZE_LIMIT=25M
 WORKDIR /app
 COPY --from=build /app/package.json /app/server.js ./
 COPY --from=build /app/node_modules ./node_modules

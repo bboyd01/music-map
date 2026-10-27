@@ -3,7 +3,23 @@
 	import type { LayoutProps } from './$types';
 
 	let { children, data }: LayoutProps = $props();
+
+	let online = $state(true);
+	$effect(() => {
+		const update = () => (online = navigator.onLine);
+		update();
+		addEventListener('online', update);
+		addEventListener('offline', update);
+		return () => {
+			removeEventListener('online', update);
+			removeEventListener('offline', update);
+		};
+	});
 </script>
+
+{#if !online}
+	<div class="offline" role="status">You're offline. Showing what was last loaded; changes need a connection.</div>
+{/if}
 
 <div class="shell">
 	<main>
@@ -13,6 +29,16 @@
 </div>
 
 <style>
+	.offline {
+		position: sticky;
+		top: 0;
+		z-index: 20;
+		padding: calc(8px + var(--safe-top)) 16px 8px;
+		background: var(--text);
+		color: var(--bg);
+		font-size: 0.85rem;
+		text-align: center;
+	}
 	main {
 		max-width: 960px;
 		margin: 0 auto;

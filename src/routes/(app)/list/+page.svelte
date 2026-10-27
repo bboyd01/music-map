@@ -140,6 +140,17 @@
 	</div>
 </div>
 
+{#if data.elsewhere.length}
+	<section class="elsewhere" aria-label="Elsewhere in your library">
+		<h2>Elsewhere in your library</h2>
+		<ul>
+			{#each data.elsewhere as e (e.id)}
+				<li><a class="chip" href="/e/{e.id}">{e.name} <span class="muted">· {e.kind}</span></a></li>
+			{/each}
+		</ul>
+	</section>
+{/if}
+
 {#if data.items.length === 0}
 	<div class="empty">
 		{#if query.q || query.kind !== 'all' || query.minRating !== undefined || query.genre || query.era}
@@ -206,6 +217,31 @@
 	}
 	.row select {
 		min-width: 0;
+		font-size: 0.9rem;
+	}
+	.elsewhere h2 {
+		margin: 0 0 6px;
+		font-size: 0.85rem;
+		color: var(--muted);
+	}
+	.elsewhere ul {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 6px;
+		margin: 0 0 12px;
+		padding: 0;
+		list-style: none;
+	}
+	.chip {
+		display: inline-flex;
+		align-items: center;
+		min-height: 36px;
+		padding: 0 12px;
+		border-radius: 18px;
+		border: 1px solid var(--border);
+		background: var(--surface);
+		color: var(--text);
+		text-decoration: none;
 		font-size: 0.9rem;
 	}
 	.items {

@@ -1,7 +1,37 @@
 <script lang="ts">
+	import { invalidateAll } from '$app/navigation';
+	import { api } from '#lib/api.ts';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
+
+	let importing = $state(false);
+	let importMessage = $state('');
+	let importError = $state('');
+
+	async function importFile(e: Event) {
+		const input = e.currentTarget as HTMLInputElement;
+		const file = input.files?.[0];
+		if (!file) return;
+		importing = true;
+		importMessage = importError = '';
+		try {
+			let body: unknown;
+			try {
+				body = JSON.parse(await file.text());
+			} catch {
+				throw new Error('That file isn’t valid JSON.');
+			}
+			const r = await api<{ created: number; matched: number; edgesAdded: number; listItemsAdded: number }>('/api/import', { body });
+			importMessage = `Imported: ${r.created} new, ${r.matched} already here, ${r.listItemsAdded} list items and ${r.edgesAdded} links added.`;
+			await invalidateAll();
+		} catch (err) {
+			importError = (err as Error).message;
+		} finally {
+			importing = false;
+			input.value = '';
+		}
+	}
 </script>
 
 <svelte:head>
@@ -21,6 +51,20 @@
 			<button class="btn btn-danger" type="submit">Log out everywhere</button>
 		</form>
 	</div>
+</section>
+
+<section>
+	<h2>Backup</h2>
+	<p class="muted">Export everything (list, ratings, reviews, tags, links) as JSON. Importing merges a file into this library and is safe to repeat.</p>
+	<div class="actions">
+		<a class="btn" href="/api/export" download>Export JSON</a>
+		<label class="btn">
+			{importing ? 'Importing…' : 'Import JSON'}
+			<input class="visually-hidden" type="file" accept="application/json,.json" disabled={importing} onchange={importFile} />
+		</label>
+	</div>
+	{#if importMessage}<p role="status">{importMessage}</p>{/if}
+	{#if importError}<p class="error" role="alert">{importError}</p>{/if}
 </section>
 
 <section>
@@ -82,6 +126,13 @@
 	.on {
 		color: var(--accent);
 		font-weight: 600;
+	}
+	.error {
+		color: var(--danger);
+	}
+	label.btn:focus-within {
+		outline: 2px solid var(--accent);
+		outline-offset: 2px;
 	}
 	code {
 		overflow-wrap: anywhere;

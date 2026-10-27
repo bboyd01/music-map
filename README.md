@@ -19,6 +19,7 @@ one `/data` volume.
 | `SPOTIFY_CLIENT_ID` / `SPOTIFY_CLIENT_SECRET` | no | Enables Spotify links and search. |
 | `LASTFM_API_KEY` | no | Enables Last.fm "similar" suggestions. |
 | `PORT` | no | Default `3000`. |
+| `BODY_SIZE_LIMIT` | no | Max request size (adapter-node). The Docker image sets `25M` so large JSON imports fit. |
 
 The app refuses to start if `APP_PASSWORD_HASH` or `SESSION_SECRET` is missing or invalid.
 
@@ -62,14 +63,47 @@ The proxy must append the client address to `X-Forwarded-For`. Caddy, Traefik an
 
 ### Backups
 
-SQLite runs in WAL mode, so don't copy a live `music-map.db` file on its own. Either:
+Two complementary options:
 
-- stop the container and copy the whole `/data` volume, or
-- run `sqlite3 /data/music-map.db ".backup /data/backup.db"` while it runs.
+- **The `/data` volume** (DB + artwork) is the complete backup. SQLite runs in WAL mode, so don't
+  copy a live `music-map.db` on its own: either stop the container and copy the whole volume, or
+  take a consistent snapshot while it runs:
+  ```sh
+  docker compose exec music-map node -e "new (require('better-sqlite3'))('/data/music-map.db').backup('/data/backup.db').then(()=>console.log('ok'))"
+  ```
+  then copy `/data/backup.db` and `/data/artwork/` off the server.
+- **JSON export** (Settings → Export JSON, or `GET /api/export`): list, ratings, reviews, tags,
+  links and remembered rejections in one portable file with a `schemaVersion`. It doesn't
+  contain artwork images; those are re-used if present in `/data/artwork`, otherwise items just
+  show placeholders until you hit "Refresh details".
 
-JSON export/import comes in a later milestone.
+### Restore
 
-## Development
+- **From a volume copy:** stop the container, put `music-map.db` (and `artwork/`) back into the
+  volume, start it again. Remove any leftover `music-map.db-wal`/`-shm` files from the old copy.
+- **From JSON:** Settings → Import JSON (or `POST /api/import` with the file as the body). Import
+  merges: items are matched by Apple/Spotify/MusicBrainz ids or title, existing values win, and
+  running the same import twice changes nothing. Files with an unknown `schemaVersion` are
+  rejected with a clear message. Large libraries: the image sets `BODY_SIZE_LIMIT=25M` for this.
+
+### Upgrading
+
+```sh
+git pull
+docker compose up -d --build
+```
+
+Database migrations run automatically on startup. Take a backup first (see above); downgrading
+after a migration isn't supported.
+
+## Offline
+
+The app is an installable PWA. The app shell, viewed artwork and the last-loaded pages are kept
+by the service worker, so your list can be read offline (a banner says you're offline). Adding,
+rating and editing need a connection. Cached pages and artwork are cleared when you log out or
+your session expires.
+
+## Development## Development
 
 ```sh
 npm install

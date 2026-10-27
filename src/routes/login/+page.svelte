@@ -4,6 +4,11 @@
 
 	let { form }: PageProps = $props();
 	let submitting = $state(false);
+
+	// Logged out (or session expired): drop pages and artwork cached for offline reading.
+	$effect(() => {
+		if ('caches' in window) for (const name of ['pages', 'artwork']) caches.delete(name);
+	});
 </script>
 
 <svelte:head>
