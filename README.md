@@ -194,10 +194,15 @@ then fills in details:
   for classical music, also the **composer's period** (e.g. Baroque) from their lifespan.
 - **Instruments** from MusicBrainz performer credits (track → album → artist). Coverage is sparse.
 - **Artwork fallback** from the Cover Art Archive.
+- **Multi-artist credits** ("A, B & C") are split into separate artists using the MusicBrainz credit.
 
 Tags are inherited: a track without its own genre shows its album's, then its artist's. Editing a
 tag facet makes it yours; re-enrichment never touches it. Jobs retry up to 3 times with backoff and
 resume after a restart; a failed enrichment never affects the item itself.
+
+**Refreshing existing items.** The first start with `MB_USER_AGENT` set re-enriches everything
+that has no MusicBrainz match yet, once. After adding another source later (Spotify, Last.fm),
+use **Settings → Refresh all details**; a single item has **Refresh details** on its page.
 
 ## Suggestions
 

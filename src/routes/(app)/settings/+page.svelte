@@ -32,6 +32,24 @@
 			input.value = '';
 		}
 	}
+
+	let refreshing = $state(false);
+	let refreshMessage = $state('');
+
+	async function refreshAll() {
+		refreshing = true;
+		refreshMessage = '';
+		try {
+			const { queued } = await api<{ queued: number }>('/api/enrich', { method: 'POST' });
+			refreshMessage = queued
+				? `Refreshing ${queued} item${queued === 1 ? '' : 's'} in the background. MusicBrainz allows one request a second, so a large library takes a while.`
+				: 'Nothing to refresh: everything is already queued, or the library is empty.';
+		} catch (err) {
+			refreshMessage = (err as Error).message;
+		} finally {
+			refreshing = false;
+		}
+	}
 </script>
 
 <svelte:head>
@@ -71,15 +89,20 @@
 	<h2>Sources</h2>
 	<ul class="sources">
 		<li><span>Apple Music</span><span class="on">On</span></li>
-		<li>
-			<span>Spotify</span>
-			{#if data.spotifyEnabled}
-				<span class="on">On</span>
-			{:else}
-				<span class="muted">Off: set SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET</span>
-			{/if}
-		</li>
+		{#each [{ name: 'Spotify', on: data.spotifyEnabled, env: 'SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET' }, { name: 'MusicBrainz', on: data.musicBrainzEnabled, env: 'MB_USER_AGENT' }, { name: 'Last.fm', on: data.lastfmEnabled, env: 'LASTFM_API_KEY' }] as src (src.name)}
+			<li>
+				<span>{src.name}</span>
+				{#if src.on}
+					<span class="on">On</span>
+				{:else}
+					<span class="muted">Off: set {src.env}</span>
+				{/if}
+			</li>
+		{/each}
 	</ul>
+	<p class="muted">After turning on a source, refresh details so existing items use it. Tags you edited are kept.</p>
+	<button class="btn" type="button" onclick={refreshAll} disabled={refreshing}>{refreshing ? 'Queuing…' : 'Refresh all details'}</button>
+	{#if refreshMessage}<p class="muted" role="status">{refreshMessage}</p>{/if}
 </section>
 
 <section>

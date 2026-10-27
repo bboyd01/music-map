@@ -1,4 +1,4 @@
-import { and, eq, inArray, or } from 'drizzle-orm';
+import { and, eq, inArray, or, sql } from 'drizzle-orm';
 import { composerPeriod, decadeForYear, isClassical } from '../../domain/eras';
 import { bestMatch, matchTitle, splitArtists } from '../../domain/matching';
 import { normalizeArtistName, normalizeTitle, normKey, releaseYear } from '../../domain/normalize';
@@ -8,6 +8,7 @@ import type { DB as Db, DbOrTx as DB } from '../db/client';
 import { entities, entityArtists, externalIds, kv, type Entity } from '../db/schema';
 import { ensureEntity, findByExternalId, findByNormKey } from '../library/entities';
 import { mergeEntities } from '../library/merge';
+import { listedSql } from '../library/relations';
 import type { FetchFn } from '../providers/http';
 import type { MbArtist, MbRecording, MusicBrainzClient } from '../providers/musicbrainz';
 import type { Providers } from '../providers/resolve';
@@ -96,6 +97,32 @@ export async function enrichEntity(deps: EnrichDeps, payload: EnrichPayload) {
 		setStatus(deps.db, entity.id, 'pending');
 		throw err;
 	}
+}
+
+/**
+ * Queues already-enriched library items again (not unaccepted suggestion stubs), releases before
+ * artists so artists can pick up MusicBrainz ids from their credits. Returns how many were queued.
+ */
+export function requeueEnriched(db: DB, enqueue: EnrichDeps['enqueue'], { missingMusicBrainz = false } = {}): number {
+	const rows = db
+		.select({ id: entities.id })
+		.from(entities)
+		.where(
+			and(
+				inArray(entities.enrichStatus, ['done', 'failed']),
+				or(listedSql, sql`exists (select 1 from edges where (from_id = ${entities.id} or to_id = ${entities.id}) and status = 'accepted')`),
+				missingMusicBrainz
+					? sql`not exists (select 1 from external_ids where entity_id = ${entities.id} and provider = 'musicbrainz')`
+					: undefined
+			)
+		)
+		.orderBy(sql`${entities.kind} = 'artist'`, entities.id)
+		.all();
+	for (const { id } of rows) {
+		setStatus(db, id, 'pending');
+		enqueue({ entityId: id });
+	}
+	return rows.length;
 }
 
 /** Marks an entity as permanently failed (called by the worker after the last attempt). */

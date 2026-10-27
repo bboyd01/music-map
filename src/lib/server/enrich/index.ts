@@ -8,6 +8,7 @@ import { LastfmClient } from '../providers/lastfm.ts';
 import { MusicBrainzClient } from '../providers/musicbrainz.ts';
 import { WikidataClient } from '../providers/wikidata.ts';
 import { getProviders } from '../providers/index.ts';
+import { requeueEnriched } from './pipeline.ts';
 import { createEnrichment } from './runner.ts';
 import { seedEras } from './tags.ts';
 
@@ -33,23 +34,31 @@ export function enrichment() {
 }
 
 export function startEnrichment() {
-	seedEras(getDb());
-	if (MB_USER_AGENT) backfillCredits();
+	const db = getDb();
+	seedEras(db);
+	if (MB_USER_AGENT) {
+		once('backfill:credits', () => backfillCredits());
+		// Items enriched before MusicBrainz was configured only got provider genres and a decade.
+		once('backfill:musicbrainz', () => requeueEnriched(db, enrichment().enqueue, { missingMusicBrainz: true }));
+	}
 	enrichment().worker.start();
 }
 
-/** One-time: re-enrich releases credited to combined artists so they get split into separate ones. */
-function backfillCredits() {
+function once(key: string, run: () => void) {
 	const db = getDb();
-	const key = 'backfill:credits';
 	if (db.select().from(kv).where(eq(kv.key, key)).get()) return;
+	run();
+	db.insert(kv).values({ key, value: new Date().toISOString() }).run();
+}
+
+/** Re-enriches releases credited to combined artists so they get split into separate ones. */
+function backfillCredits() {
 	const artist = alias(entities, 'artist');
-	const rows = db
+	const rows = getDb()
 		.select({ id: entities.id, artistName: artist.name })
 		.from(entities)
 		.innerJoin(artist, eq(artist.id, entities.artistId))
 		.where(ne(entities.kind, 'artist'))
 		.all();
 	for (const r of rows) if (splitArtists(r.artistName).length > 1) enrichment().enqueue({ entityId: r.id });
-	db.insert(kv).values({ key, value: new Date().toISOString() }).run();
 }
