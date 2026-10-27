@@ -90,7 +90,7 @@
 					onclick={() => {
 						status = 'listened';
 						listenedAt ||= localToday();
-					}}>Listened</button
+					}}>Library</button
 				>
 			</div>
 

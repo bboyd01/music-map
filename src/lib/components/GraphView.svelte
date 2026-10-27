@@ -77,9 +77,9 @@
 			{ selector: 'node.era', style: { 'background-color': '#0e7490' } },
 			{ selector: 'node.instrument', style: { 'background-color': '#b45309' } },
 			{ selector: 'node:selected', style: { 'overlay-color': accent, 'overlay-opacity': 0.25, 'overlay-padding': 6 } },
-			{ selector: 'edge', style: { width: 1.5, 'curve-style': 'haystack', 'line-color': border, opacity: 0.9 } },
-			{ selector: 'edge.genre, edge.era, edge.instrument', style: { width: 1, opacity: 0.45 } },
-			{ selector: 'edge.similar', style: { width: 2, 'line-color': muted } },
+			{ selector: 'edge', style: { width: 1.5, 'curve-style': 'haystack', 'line-color': muted, opacity: 0.8 } },
+			{ selector: 'edge.genre, edge.era, edge.instrument', style: { width: 1, opacity: 0.55 } },
+			{ selector: 'edge.similar', style: { width: 2, 'line-color': text, opacity: 0.7 } },
 			{
 				selector: 'edge.inspired',
 				style: {
