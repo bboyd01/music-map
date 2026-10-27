@@ -83,6 +83,21 @@ npm run db:generate          # generate a Drizzle migration after editing schema
 
 In dev, `ORIGIN` can be left unset.
 
+### Provider scripts
+
+```sh
+# Live check: resolve a link (or search text) and print the normalized metadata
+npx tsx scripts/resolve-link.ts 'https://music.apple.com/us/album/kind-of-blue/268443092'
+npx tsx scripts/resolve-link.ts --track 'so what miles davis'
+
+# Re-record test fixtures from the live APIs (tests themselves never call live APIs)
+npx tsx scripts/record-fixtures.ts apple
+SPOTIFY_CLIENT_ID=… SPOTIFY_CLIENT_SECRET=… npx tsx scripts/record-fixtures.ts spotify
+```
+
+The Spotify fixtures are currently hand-written from the API reference (each entry has a `note`
+saying so). Re-record them once you have credentials.
+
 ## Security notes
 
 - Everything except `/login`, `/healthz`, and static PWA assets (manifest, icons, service worker,

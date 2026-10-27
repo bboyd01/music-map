@@ -1,3 +1,9 @@
+<script lang="ts">
+	import type { PageProps } from './$types';
+
+	let { data }: PageProps = $props();
+</script>
+
 <svelte:head>
 	<title>Settings · Music Map</title>
 </svelte:head>
@@ -15,6 +21,21 @@
 			<button class="btn btn-danger" type="submit">Log out everywhere</button>
 		</form>
 	</div>
+</section>
+
+<section>
+	<h2>Sources</h2>
+	<ul class="sources">
+		<li><span>Apple Music</span><span class="on">On</span></li>
+		<li>
+			<span>Spotify</span>
+			{#if data.spotifyEnabled}
+				<span class="on">On</span>
+			{:else}
+				<span class="muted">Off: set SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET</span>
+			{/if}
+		</li>
+	</ul>
 </section>
 
 <section>
@@ -36,6 +57,31 @@
 		display: flex;
 		flex-wrap: wrap;
 		gap: 12px;
+	}
+	.sources {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+		background: var(--surface);
+	}
+	.sources li {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: space-between;
+		gap: 4px 12px;
+		padding: 12px 14px;
+	}
+	.sources li + li {
+		border-top: 1px solid var(--border);
+	}
+	.sources span:last-child {
+		text-align: right;
+	}
+	.on {
+		color: var(--accent);
+		font-weight: 600;
 	}
 	code {
 		overflow-wrap: anywhere;

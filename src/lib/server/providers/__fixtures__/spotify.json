@@ -1,0 +1,469 @@
+[
+	{
+		"request": {
+			"method": "POST",
+			"url": "https://accounts.spotify.com/api/token"
+		},
+		"status": 200,
+		"body": {
+			"access_token": "BQ-test-token",
+			"token_type": "Bearer",
+			"expires_in": 3600
+		},
+		"note": "Hand-written from the Spotify Web API reference (not recorded: no credentials/network when created). Re-record with scripts/record-fixtures.ts spotify."
+	},
+	{
+		"request": {
+			"url": "https://api.spotify.com/v1/albums/1weenld61qoidwYuZ1GESA"
+		},
+		"status": 200,
+		"body": {
+			"album_type": "album",
+			"total_tracks": 5,
+			"available_markets": [
+				"US",
+				"GB"
+			],
+			"external_urls": {
+				"spotify": "https://open.spotify.com/album/1weenld61qoidwYuZ1GESA"
+			},
+			"href": "https://api.spotify.com/v1/albums/1weenld61qoidwYuZ1GESA",
+			"id": "1weenld61qoidwYuZ1GESA",
+			"images": [
+				{
+					"url": "https://i.scdn.co/image/ab67616d0000b2737ab89c25093ea3787b1995b4",
+					"width": 640,
+					"height": 640
+				},
+				{
+					"url": "https://i.scdn.co/image/ab67616d00001e027ab89c25093ea3787b1995b4",
+					"width": 300,
+					"height": 300
+				},
+				{
+					"url": "https://i.scdn.co/image/ab67616d000048517ab89c25093ea3787b1995b4",
+					"width": 64,
+					"height": 64
+				}
+			],
+			"name": "Kind Of Blue",
+			"release_date": "1959-08-17",
+			"release_date_precision": "day",
+			"type": "album",
+			"uri": "spotify:album:1weenld61qoidwYuZ1GESA",
+			"artists": [
+				{
+					"external_urls": {
+						"spotify": "https://open.spotify.com/artist/0kbYTNQb4Pb1rPbbaF0pT4"
+					},
+					"href": "https://api.spotify.com/v1/artists/0kbYTNQb4Pb1rPbbaF0pT4",
+					"id": "0kbYTNQb4Pb1rPbbaF0pT4",
+					"name": "Miles Davis",
+					"type": "artist",
+					"uri": "spotify:artist:0kbYTNQb4Pb1rPbbaF0pT4"
+				}
+			],
+			"tracks": {
+				"href": "https://api.spotify.com/v1/albums/1weenld61qoidwYuZ1GESA/tracks",
+				"limit": 50,
+				"next": null,
+				"offset": 0,
+				"previous": null,
+				"total": 5,
+				"items": [
+					{
+						"artists": [
+							{
+								"external_urls": {
+									"spotify": "https://open.spotify.com/artist/0kbYTNQb4Pb1rPbbaF0pT4"
+								},
+								"href": "https://api.spotify.com/v1/artists/0kbYTNQb4Pb1rPbbaF0pT4",
+								"id": "0kbYTNQb4Pb1rPbbaF0pT4",
+								"name": "Miles Davis",
+								"type": "artist",
+								"uri": "spotify:artist:0kbYTNQb4Pb1rPbbaF0pT4"
+							}
+						],
+						"disc_number": 1,
+						"duration_ms": 562640,
+						"id": "4vLYewWIvqHfKtJDk8c8tq",
+						"name": "So What",
+						"track_number": 1,
+						"type": "track"
+					}
+				]
+			},
+			"copyrights": [
+				{
+					"text": "(P) 1959 Columbia Records",
+					"type": "P"
+				}
+			],
+			"external_ids": {
+				"upc": "074646493520"
+			},
+			"genres": [],
+			"label": "Columbia",
+			"popularity": 72
+		},
+		"note": "Hand-written from the Spotify Web API reference (not recorded: no credentials/network when created). Re-record with scripts/record-fixtures.ts spotify."
+	},
+	{
+		"request": {
+			"url": "https://api.spotify.com/v1/tracks/4vLYewWIvqHfKtJDk8c8tq"
+		},
+		"status": 200,
+		"body": {
+			"album": {
+				"album_type": "album",
+				"total_tracks": 5,
+				"available_markets": [
+					"US",
+					"GB"
+				],
+				"external_urls": {
+					"spotify": "https://open.spotify.com/album/1weenld61qoidwYuZ1GESA"
+				},
+				"href": "https://api.spotify.com/v1/albums/1weenld61qoidwYuZ1GESA",
+				"id": "1weenld61qoidwYuZ1GESA",
+				"images": [
+					{
+						"url": "https://i.scdn.co/image/ab67616d0000b2737ab89c25093ea3787b1995b4",
+						"width": 640,
+						"height": 640
+					},
+					{
+						"url": "https://i.scdn.co/image/ab67616d00001e027ab89c25093ea3787b1995b4",
+						"width": 300,
+						"height": 300
+					},
+					{
+						"url": "https://i.scdn.co/image/ab67616d000048517ab89c25093ea3787b1995b4",
+						"width": 64,
+						"height": 64
+					}
+				],
+				"name": "Kind Of Blue",
+				"release_date": "1959-08-17",
+				"release_date_precision": "day",
+				"type": "album",
+				"uri": "spotify:album:1weenld61qoidwYuZ1GESA",
+				"artists": [
+					{
+						"external_urls": {
+							"spotify": "https://open.spotify.com/artist/0kbYTNQb4Pb1rPbbaF0pT4"
+						},
+						"href": "https://api.spotify.com/v1/artists/0kbYTNQb4Pb1rPbbaF0pT4",
+						"id": "0kbYTNQb4Pb1rPbbaF0pT4",
+						"name": "Miles Davis",
+						"type": "artist",
+						"uri": "spotify:artist:0kbYTNQb4Pb1rPbbaF0pT4"
+					}
+				]
+			},
+			"artists": [
+				{
+					"external_urls": {
+						"spotify": "https://open.spotify.com/artist/0kbYTNQb4Pb1rPbbaF0pT4"
+					},
+					"href": "https://api.spotify.com/v1/artists/0kbYTNQb4Pb1rPbbaF0pT4",
+					"id": "0kbYTNQb4Pb1rPbbaF0pT4",
+					"name": "Miles Davis",
+					"type": "artist",
+					"uri": "spotify:artist:0kbYTNQb4Pb1rPbbaF0pT4"
+				}
+			],
+			"available_markets": [
+				"US"
+			],
+			"disc_number": 1,
+			"duration_ms": 562640,
+			"explicit": false,
+			"external_ids": {
+				"isrc": "USSM15900113"
+			},
+			"external_urls": {
+				"spotify": "https://open.spotify.com/track/4vLYewWIvqHfKtJDk8c8tq"
+			},
+			"href": "https://api.spotify.com/v1/tracks/4vLYewWIvqHfKtJDk8c8tq",
+			"id": "4vLYewWIvqHfKtJDk8c8tq",
+			"is_local": false,
+			"name": "So What",
+			"popularity": 66,
+			"preview_url": null,
+			"track_number": 1,
+			"type": "track",
+			"uri": "spotify:track:4vLYewWIvqHfKtJDk8c8tq"
+		},
+		"note": "Hand-written from the Spotify Web API reference (not recorded: no credentials/network when created). Re-record with scripts/record-fixtures.ts spotify."
+	},
+	{
+		"request": {
+			"url": "https://api.spotify.com/v1/artists/0kbYTNQb4Pb1rPbbaF0pT4"
+		},
+		"status": 200,
+		"body": {
+			"external_urls": {
+				"spotify": "https://open.spotify.com/artist/0kbYTNQb4Pb1rPbbaF0pT4"
+			},
+			"href": "https://api.spotify.com/v1/artists/0kbYTNQb4Pb1rPbbaF0pT4",
+			"id": "0kbYTNQb4Pb1rPbbaF0pT4",
+			"name": "Miles Davis",
+			"type": "artist",
+			"uri": "spotify:artist:0kbYTNQb4Pb1rPbbaF0pT4",
+			"followers": {
+				"href": null,
+				"total": 3000000
+			},
+			"genres": [
+				"bebop",
+				"cool jazz",
+				"hard bop",
+				"jazz",
+				"jazz fusion"
+			],
+			"images": [
+				{
+					"url": "https://i.scdn.co/image/ab6761610000e5eb0fbaf2a1aa5a1b9fd7c1ae1e",
+					"width": 640,
+					"height": 640
+				},
+				{
+					"url": "https://i.scdn.co/image/ab676161000051740fbaf2a1aa5a1b9fd7c1ae1e",
+					"width": 320,
+					"height": 320
+				}
+			],
+			"popularity": 68
+		},
+		"note": "Hand-written from the Spotify Web API reference (not recorded: no credentials/network when created). Re-record with scripts/record-fixtures.ts spotify."
+	},
+	{
+		"request": {
+			"url": "https://api.spotify.com/v1/albums/0000000000000000000000"
+		},
+		"status": 404,
+		"body": {
+			"error": {
+				"status": 404,
+				"message": "Resource not found"
+			}
+		},
+		"note": "Hand-written from the Spotify Web API reference (not recorded: no credentials/network when created). Re-record with scripts/record-fixtures.ts spotify."
+	},
+	{
+		"request": {
+			"url": "https://api.spotify.com/v1/search?q=kind+of+blue&type=album&limit=10"
+		},
+		"status": 200,
+		"body": {
+			"albums": {
+				"href": "https://api.spotify.com/v1/search?query=kind+of+blue&type=album&offset=0&limit=10",
+				"limit": 10,
+				"next": null,
+				"offset": 0,
+				"previous": null,
+				"total": 3,
+				"items": [
+					{
+						"album_type": "album",
+						"total_tracks": 5,
+						"available_markets": [
+							"US",
+							"GB"
+						],
+						"external_urls": {
+							"spotify": "https://open.spotify.com/album/1weenld61qoidwYuZ1GESA"
+						},
+						"href": "https://api.spotify.com/v1/albums/1weenld61qoidwYuZ1GESA",
+						"id": "1weenld61qoidwYuZ1GESA",
+						"images": [
+							{
+								"url": "https://i.scdn.co/image/ab67616d0000b2737ab89c25093ea3787b1995b4",
+								"width": 640,
+								"height": 640
+							},
+							{
+								"url": "https://i.scdn.co/image/ab67616d00001e027ab89c25093ea3787b1995b4",
+								"width": 300,
+								"height": 300
+							},
+							{
+								"url": "https://i.scdn.co/image/ab67616d000048517ab89c25093ea3787b1995b4",
+								"width": 64,
+								"height": 64
+							}
+						],
+						"name": "Kind Of Blue",
+						"release_date": "1959-08-17",
+						"release_date_precision": "day",
+						"type": "album",
+						"uri": "spotify:album:1weenld61qoidwYuZ1GESA",
+						"artists": [
+							{
+								"external_urls": {
+									"spotify": "https://open.spotify.com/artist/0kbYTNQb4Pb1rPbbaF0pT4"
+								},
+								"href": "https://api.spotify.com/v1/artists/0kbYTNQb4Pb1rPbbaF0pT4",
+								"id": "0kbYTNQb4Pb1rPbbaF0pT4",
+								"name": "Miles Davis",
+								"type": "artist",
+								"uri": "spotify:artist:0kbYTNQb4Pb1rPbbaF0pT4"
+							}
+						]
+					},
+					null,
+					{
+						"album_type": "album",
+						"total_tracks": 17,
+						"available_markets": [
+							"US",
+							"GB"
+						],
+						"external_urls": {
+							"spotify": "https://open.spotify.com/album/0RDnQBDy6IOcZCnhCU7Jvs"
+						},
+						"href": "https://api.spotify.com/v1/albums/1weenld61qoidwYuZ1GESA",
+						"id": "0RDnQBDy6IOcZCnhCU7Jvs",
+						"images": [
+							{
+								"url": "https://i.scdn.co/image/ab67616d0000b2738f5bd7b0df0d1a9ee1b4b6d8",
+								"width": 640,
+								"height": 640
+							},
+							{
+								"url": "https://i.scdn.co/image/ab67616d00001e028f5bd7b0df0d1a9ee1b4b6d8",
+								"width": 300,
+								"height": 300
+							},
+							{
+								"url": "https://i.scdn.co/image/ab67616d000048518f5bd7b0df0d1a9ee1b4b6d8",
+								"width": 64,
+								"height": 64
+							}
+						],
+						"name": "Kind Of Blue (Legacy Edition)",
+						"release_date": "1959",
+						"release_date_precision": "year",
+						"type": "album",
+						"uri": "spotify:album:1weenld61qoidwYuZ1GESA",
+						"artists": [
+							{
+								"external_urls": {
+									"spotify": "https://open.spotify.com/artist/0kbYTNQb4Pb1rPbbaF0pT4"
+								},
+								"href": "https://api.spotify.com/v1/artists/0kbYTNQb4Pb1rPbbaF0pT4",
+								"id": "0kbYTNQb4Pb1rPbbaF0pT4",
+								"name": "Miles Davis",
+								"type": "artist",
+								"uri": "spotify:artist:0kbYTNQb4Pb1rPbbaF0pT4"
+							}
+						]
+					}
+				]
+			}
+		},
+		"note": "Hand-written from the Spotify Web API reference (not recorded: no credentials/network when created). Re-record with scripts/record-fixtures.ts spotify."
+	},
+	{
+		"request": {
+			"url": "https://api.spotify.com/v1/search?q=kind+of+blue&type=track&limit=10"
+		},
+		"status": 200,
+		"body": {
+			"tracks": {
+				"href": "https://api.spotify.com/v1/search?query=kind+of+blue&type=track&offset=0&limit=10",
+				"limit": 10,
+				"next": null,
+				"offset": 0,
+				"previous": null,
+				"total": 1,
+				"items": [
+					{
+						"album": {
+							"album_type": "album",
+							"total_tracks": 5,
+							"available_markets": [
+								"US",
+								"GB"
+							],
+							"external_urls": {
+								"spotify": "https://open.spotify.com/album/1weenld61qoidwYuZ1GESA"
+							},
+							"href": "https://api.spotify.com/v1/albums/1weenld61qoidwYuZ1GESA",
+							"id": "1weenld61qoidwYuZ1GESA",
+							"images": [
+								{
+									"url": "https://i.scdn.co/image/ab67616d0000b2737ab89c25093ea3787b1995b4",
+									"width": 640,
+									"height": 640
+								},
+								{
+									"url": "https://i.scdn.co/image/ab67616d00001e027ab89c25093ea3787b1995b4",
+									"width": 300,
+									"height": 300
+								},
+								{
+									"url": "https://i.scdn.co/image/ab67616d000048517ab89c25093ea3787b1995b4",
+									"width": 64,
+									"height": 64
+								}
+							],
+							"name": "Kind Of Blue",
+							"release_date": "1959-08-17",
+							"release_date_precision": "day",
+							"type": "album",
+							"uri": "spotify:album:1weenld61qoidwYuZ1GESA",
+							"artists": [
+								{
+									"external_urls": {
+										"spotify": "https://open.spotify.com/artist/0kbYTNQb4Pb1rPbbaF0pT4"
+									},
+									"href": "https://api.spotify.com/v1/artists/0kbYTNQb4Pb1rPbbaF0pT4",
+									"id": "0kbYTNQb4Pb1rPbbaF0pT4",
+									"name": "Miles Davis",
+									"type": "artist",
+									"uri": "spotify:artist:0kbYTNQb4Pb1rPbbaF0pT4"
+								}
+							]
+						},
+						"artists": [
+							{
+								"external_urls": {
+									"spotify": "https://open.spotify.com/artist/0kbYTNQb4Pb1rPbbaF0pT4"
+								},
+								"href": "https://api.spotify.com/v1/artists/0kbYTNQb4Pb1rPbbaF0pT4",
+								"id": "0kbYTNQb4Pb1rPbbaF0pT4",
+								"name": "Miles Davis",
+								"type": "artist",
+								"uri": "spotify:artist:0kbYTNQb4Pb1rPbbaF0pT4"
+							}
+						],
+						"available_markets": [
+							"US"
+						],
+						"disc_number": 1,
+						"duration_ms": 562640,
+						"explicit": false,
+						"external_ids": {
+							"isrc": "USSM15900113"
+						},
+						"external_urls": {
+							"spotify": "https://open.spotify.com/track/4vLYewWIvqHfKtJDk8c8tq"
+						},
+						"href": "https://api.spotify.com/v1/tracks/4vLYewWIvqHfKtJDk8c8tq",
+						"id": "4vLYewWIvqHfKtJDk8c8tq",
+						"is_local": false,
+						"name": "So What",
+						"popularity": 66,
+						"preview_url": null,
+						"track_number": 1,
+						"type": "track",
+						"uri": "spotify:track:4vLYewWIvqHfKtJDk8c8tq"
+					}
+				]
+			}
+		},
+		"note": "Hand-written from the Spotify Web API reference (not recorded: no credentials/network when created). Re-record with scripts/record-fixtures.ts spotify."
+	}
+]
