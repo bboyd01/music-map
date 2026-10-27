@@ -1,12 +1,14 @@
-import { eq, inArray } from 'drizzle-orm';
+import { and, desc, eq, inArray, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { normalizeReleaseDate } from '../../domain/normalize';
 import { FACETS } from '../../domain/tags';
-import type { EntityView, Facet } from '../../types';
+import { groupRelations } from '../../domain/edges';
+import type { EntityDetail, EntityView, Facet } from '../../types';
 import type { DbOrTx } from '../db/client';
-import { entities, externalIds } from '../db/schema';
+import { edges, entities, externalIds, listItems } from '../db/schema';
 import { recomputeArtistEras } from '../enrich/pipeline';
 import { effectiveFor, setManualTags } from '../enrich/tags';
+import { summaries } from './relations';
 
 export function getEntityView(db: DbOrTx, id: number): EntityView | null {
 	const e = db.select().from(entities).where(eq(entities.id, id)).get();
@@ -78,4 +80,40 @@ export function updateEntity(db: DbOrTx, id: number, patch: EntityPatch): Entity
 	// Artist eras are derived from their releases.
 	if (patch.tags?.era && e.kind !== 'artist' && e.artistId !== null) recomputeArtistEras(db, e.artistId);
 	return getEntityView(db, id);
+}
+
+/** Everything the detail page shows: tags, list state, accepted relations, child releases. */
+export function getEntityDetail(db: DbOrTx, id: number): EntityDetail | null {
+	const view = getEntityView(db, id);
+	if (!view) return null;
+	const item = db.select().from(listItems).where(eq(listItems.entityId, id)).get();
+	const accepted = db
+		.select()
+		.from(edges)
+		.where(and(or(eq(edges.fromId, id), eq(edges.toId, id)), eq(edges.status, 'accepted')))
+		.orderBy(edges.createdAt)
+		.all();
+	const grouped = groupRelations(id, accepted);
+	const childIds = db
+		.select({ id: entities.id })
+		.from(entities)
+		.where(view.kind === 'artist' ? eq(entities.artistId, id) : view.kind === 'album' ? eq(entities.albumId, id) : sql`0`)
+		.orderBy(desc(entities.releaseDate), entities.name)
+		.limit(100)
+		.all()
+		.map((c) => c.id);
+	const info = summaries(db, [...accepted.map((e) => (e.fromId === id ? e.toId : e.fromId)), ...childIds]);
+	const rel = (list: typeof grouped.inspired) =>
+		list.flatMap((e) => {
+			const entity = info.get(e.otherId);
+			return entity ? [{ edgeId: e.id, note: e.note, source: e.source, entity }] : [];
+		});
+	return {
+		...view,
+		listItem: item
+			? { status: item.status, rating: item.rating, review: item.review, addedAt: item.addedAt, listenedAt: item.listenedAt }
+			: null,
+		relations: { inspiredBy: rel(grouped.inspiredBy), inspired: rel(grouped.inspired), similar: rel(grouped.similar) },
+		children: childIds.map((c) => info.get(c)!).filter(Boolean)
+	};
 }

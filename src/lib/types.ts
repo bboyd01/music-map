@@ -48,6 +48,29 @@ export interface EntityView {
 	tags: Record<Facet, FacetView>;
 }
 
+export interface EntitySummary {
+	id: number;
+	kind: 'artist' | 'album' | 'track';
+	name: string;
+	artistName: string | null;
+	artworkPath: string | null;
+	listed: boolean;
+}
+
+export interface RelationView {
+	edgeId: number;
+	note: string | null;
+	source: 'manual' | 'musicbrainz' | 'wikidata' | 'lastfm';
+	entity: EntitySummary;
+}
+
+export interface EntityDetail extends EntityView {
+	listItem: Pick<ListRow, 'status' | 'rating' | 'review' | 'addedAt' | 'listenedAt'> | null;
+	relations: { inspiredBy: RelationView[]; inspired: RelationView[]; similar: RelationView[] };
+	/** An artist's albums/tracks, or an album's tracks, that are in the library. */
+	children: EntitySummary[];
+}
+
 export interface FacetOption {
 	slug: string;
 	name: string;

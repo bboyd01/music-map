@@ -1,11 +1,11 @@
 import { json } from '@sveltejs/kit';
 import { getDb } from '#lib/server/db/index.ts';
 import { idParam as entityId } from '#lib/server/params.ts';
-import { EntityPatch, getEntityView, updateEntity } from '#lib/server/library/entity.ts';
+import { EntityPatch, getEntityDetail, updateEntity } from '#lib/server/library/entity.ts';
 import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = ({ params }) => {
-	const entity = getEntityView(getDb(), entityId(params.id));
+	const entity = getEntityDetail(getDb(), entityId(params.id));
 	if (!entity) return json({ error: 'Not found' }, { status: 404 });
 	return json({ entity });
 };

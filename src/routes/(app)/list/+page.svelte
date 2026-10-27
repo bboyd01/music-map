@@ -11,7 +11,6 @@
 	let { data }: PageProps = $props();
 
 	const query = $derived(data.query);
-	const highlight = $derived(Number(page.url.searchParams.get('highlight')) || null);
 
 	let q = $state('');
 	$effect.pre(() => {
@@ -20,11 +19,9 @@
 
 	let sheetOpen = $state(false);
 	let sheetItem = $state<ListRow | null>(null);
-	let markListened = $state(false);
 
 	function href(patch: Record<string, string | undefined>) {
 		const params = new URLSearchParams(page.url.searchParams.toString());
-		params.delete('highlight');
 		for (const [k, v] of Object.entries(patch)) {
 			if (v === undefined || v === '') params.delete(k);
 			else params.set(k, v);
@@ -43,17 +40,13 @@
 		searchTimer = setTimeout(() => setParam({ q: q.trim() || undefined }), 250);
 	}
 
-	function open(item: ListRow, listen = false) {
+	function markListened(item: ListRow) {
 		sheetItem = item;
-		markListened = listen;
 		sheetOpen = true;
 	}
 
 	const year = (d: string | null) => d?.slice(0, 4) ?? '';
 
-	$effect(() => {
-		if (highlight) document.getElementById(`item-${highlight}`)?.scrollIntoView({ block: 'center' });
-	});
 
 	/** Periods (e.g. Baroque) before decades, so the more telling era survives truncation. */
 	const eraOrder = (eras: string[]) => [...eras].sort((a, b) => Number(/^\d{4}s$/.test(a)) - Number(/^\d{4}s$/.test(b)));
@@ -162,8 +155,8 @@
 {:else}
 	<ul class="items">
 		{#each data.items as item (item.id)}
-			<li id="item-{item.id}" class:highlight={item.id === highlight}>
-				<button type="button" class="card" onclick={() => open(item)}>
+			<li>
+				<a class="card" href="/e/{item.id}">
 					<Artwork path={item.artworkPath} name={item.name} size={64} />
 					<span class="row-text">
 						<span class="row-title">{item.name}</span>
@@ -180,9 +173,9 @@
 							>
 						{/if}
 					</span>
-				</button>
+				</a>
 				{#if item.status === 'to_listen'}
-					<button type="button" class="listen" aria-label="Mark “{item.name}” listened" onclick={() => open(item, true)}>
+					<button type="button" class="listen" aria-label="Mark “{item.name}” listened" onclick={() => markListened(item)}>
 						<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
 					</button>
 				{/if}
@@ -191,7 +184,7 @@
 	</ul>
 {/if}
 
-<ListItemSheet bind:open={sheetOpen} item={sheetItem} {markListened} onchange={() => invalidate('app:list')} />
+<ListItemSheet bind:open={sheetOpen} item={sheetItem} markListened onchange={() => invalidate('app:list')} />
 
 <style>
 	h1 {
@@ -231,11 +224,9 @@
 		background: var(--surface);
 		border: 1px solid var(--border);
 	}
-	li.highlight {
-		border-color: var(--accent);
-		box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 30%, transparent);
-	}
 	.card {
+		color: inherit;
+		text-decoration: none;
 		flex: 1;
 		min-width: 0;
 		display: flex;

@@ -92,6 +92,31 @@ export const entityTags = sqliteTable(
 	(t) => [primaryKey({ columns: [t.entityId, t.tagId] }), index('entity_tags_tag').on(t.tagId)]
 );
 
+/** Only `inspired` and `similar` are stored; genre/era/instrument links are derived from tags. */
+export const edges = sqliteTable(
+	'edges',
+	{
+		id: integer('id').primaryKey({ autoIncrement: true }),
+		type: text('type', { enum: ['inspired', 'similar'] }).notNull(),
+		/** inspired: the influence. similar: the lower id. */
+		fromId: integer('from_id')
+			.notNull()
+			.references(() => entities.id, { onDelete: 'cascade' }),
+		toId: integer('to_id')
+			.notNull()
+			.references(() => entities.id, { onDelete: 'cascade' }),
+		status: text('status', { enum: ['accepted', 'suggested', 'rejected'] }).notNull(),
+		source: text('source', { enum: ['manual', 'musicbrainz', 'wikidata', 'lastfm'] }).notNull(),
+		note: text('note'),
+		createdAt: text('created_at').notNull().default(now)
+	},
+	(t) => [
+		uniqueIndex('edges_type_from_to').on(t.type, t.fromId, t.toId),
+		index('edges_from').on(t.fromId),
+		index('edges_to').on(t.toId)
+	]
+);
+
 export const jobs = sqliteTable(
 	'jobs',
 	{
@@ -122,3 +147,4 @@ export const kv = sqliteTable('kv', {
 export type Entity = typeof entities.$inferSelect;
 export type Tag = typeof tags.$inferSelect;
 export type Job = typeof jobs.$inferSelect;
+export type Edge = typeof edges.$inferSelect;

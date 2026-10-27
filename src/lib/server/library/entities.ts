@@ -1,6 +1,6 @@
-import { and, eq, or } from 'drizzle-orm';
+import { and, eq, ne, or } from 'drizzle-orm';
 import type { DbOrTx as DB } from '../db/client';
-import { entities, externalIds, listItems, type Entity } from '../db/schema';
+import { edges, entities, externalIds, listItems, type Entity } from '../db/schema';
 
 type Provider = (typeof externalIds.$inferInsert)['provider'];
 type Kind = Entity['kind'];
@@ -82,7 +82,7 @@ export function ensureEntity(db: DB, input: EntityInput): { entity: Entity; crea
 	return { entity, created: true, attached: Boolean(input.external) };
 }
 
-/** True if anything still needs this entity (a list item or child entities). */
+/** True if anything still needs this entity: a list item, child entities, or a non-rejected edge. */
 function isReferenced(db: DB, id: number): boolean {
 	if (db.select({ id: listItems.entityId }).from(listItems).where(eq(listItems.entityId, id)).get()) return true;
 	const child = db
@@ -90,7 +90,13 @@ function isReferenced(db: DB, id: number): boolean {
 		.from(entities)
 		.where(or(eq(entities.artistId, id), eq(entities.albumId, id)))
 		.get();
-	return Boolean(child);
+	if (child) return true;
+	const edge = db
+		.select({ id: edges.id })
+		.from(edges)
+		.where(and(or(eq(edges.fromId, id), eq(edges.toId, id)), ne(edges.status, 'rejected')))
+		.get();
+	return Boolean(edge);
 }
 
 /**

@@ -17,7 +17,6 @@
 		name: string;
 		message: string;
 		outcome: 'added' | 'promoted' | 'existing';
-		listStatus: 'to_listen' | 'listened';
 		artworkPath: string | null;
 	};
 
@@ -35,7 +34,7 @@
 
 	const looksLikeLink = (s: string) => /^\s*(https?:\/\/|spotify:|[\w.-]*(apple\.com|spotify\.com|spotify\.link)\/)/i.test(s);
 	const key = (r: Ref) => `${r.provider}:${r.id}`;
-	const listHref = (a: Added) => `/list?status=${a.listStatus}&highlight=${a.entityId}`;
+	const detailHref = (a: Added) => `/e/${a.entityId}`;
 	const sourceLabel = { apple: 'Apple Music', spotify: 'Spotify' };
 
 	async function submit(e?: SubmitEvent) {
@@ -155,7 +154,7 @@
 	<div class="notice done" role="status">
 		<Artwork path={added.artworkPath} name={added.name} size={48} />
 		<span>{added.message}</span>
-		<a class="btn" href={listHref(added)}>View</a>
+		<a class="btn" href={detailHref(added)}>View</a>
 	</div>
 {/if}
 
@@ -178,7 +177,7 @@
 						<span class="row-sub">{r.albumName ? `${r.albumName} · ` : ''}{sourceLabel[r.provider]}</span>
 					</div>
 					{#if done}
-						<a class="btn small" href={listHref(done)}>View</a>
+						<a class="btn small" href={detailHref(done)}>View</a>
 					{:else if r.inLibrary}
 						<span class="in-list">In list</span>
 					{:else}
