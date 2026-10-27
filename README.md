@@ -11,10 +11,10 @@ one `/data` volume.
 | Variable | Required | Description |
 |---|---|---|
 | `ORIGIN` | yes in production | Public URL, e.g. `https://music.example.com`. Every request is pinned to this origin for CSRF checks. If it's `https://`, session cookies are `Secure` and HSTS is sent. |
-| `APP_PASSWORD_HASH` | yes | Output of `npx tsx scripts/hash-password.ts`. |
+| `APP_PASSWORD_HASH` | yes | Output of `scripts/hash-password.ts` (see below). |
 | `SESSION_SECRET` | yes | Random string, 32+ chars (`openssl rand -hex 32`). Keys the stored session-token hashes. |
 | `DATA_DIR` | no | Where the DB and artwork live. Default `./data`, `/data` in Docker. |
-| `TRUST_PROXY` | no | `true` when behind a reverse proxy, so login rate limiting uses the client IP from `X-Forwarded-For`. Leave it off if the app is directly reachable, or clients can spoof their IP. |
+| `TRUST_PROXY` | no | `true` when behind a reverse proxy (the compose default), so login rate limiting uses the client IP from `X-Forwarded-For`. Set `false` if the app is directly reachable, or clients can spoof their IP. |
 | `MB_USER_AGENT` | for enrichment | Sent with every MusicBrainz request, e.g. `MusicMap/1.0 (you@example.com)`. MusicBrainz requires contact info. Without it, items only get the provider's genre and a decade tag. |
 | `SPOTIFY_CLIENT_ID` / `SPOTIFY_CLIENT_SECRET` | no | Enables Spotify links and search. |
 | `LASTFM_API_KEY` | no | Enables Last.fm "similar" suggestions. |
@@ -26,7 +26,11 @@ The app refuses to start if `APP_PASSWORD_HASH` or `SESSION_SECRET` is missing o
 ### Generating the password hash
 
 ```sh
-npx tsx scripts/hash-password.ts             # prompts twice, input hidden
+# With Docker (no Node needed on the host); prompts twice, input hidden:
+docker compose run --rm -it music-map node --experimental-strip-types scripts/hash-password.ts
+
+# From a checkout with Node 22+:
+npx tsx scripts/hash-password.ts
 echo -n 'my password' | npx tsx scripts/hash-password.ts
 ```
 
@@ -36,30 +40,44 @@ The hash looks like `scrypt:32768:8:1:<salt>:<hash>`. It has no `$`, so it can g
 
 ## Running with Docker
 
+`docker-compose.yml` is ready to use. All settings come from `.env`, so the compose file itself
+doesn't need editing.
+
 ```sh
-cp docker-compose.example.yml docker-compose.yml
-cp .env.example .env        # fill in the values
-docker compose up -d --build
+git clone https://github.com/bboyd01/music-map.git && cd music-map
+cp .env.example .env
+docker compose build
+
+# Fill in .env:
+docker compose run --rm -it music-map node --experimental-strip-types scripts/hash-password.ts   # → APP_PASSWORD_HASH
+openssl rand -hex 32                                                                             # → SESSION_SECRET
+# …and set ORIGIN and MB_USER_AGENT.
+
+docker compose up -d
 ```
 
-The DB (`music-map.db`) and `artwork/` are stored in the `music-map-data` volume at `/data`, so
+If `APP_PASSWORD_HASH` or `SESSION_SECRET` is missing or invalid, the app exits at startup and
+`docker compose logs music-map` says which. The DB (`music-map.db`) and `artwork/` live in the `music-map-data` volume at `/data`, so
 they survive container recreation. The container runs as the non-root `node` user and has a
 `HEALTHCHECK` on `/healthz`. Migrations run automatically on startup.
 
-### Reverse proxy and TLS
+### HTTPS
 
-TLS is the reverse proxy's job (Caddy, Traefik, Coolify, Cloudflare Tunnel, …). The compose
-example binds to `127.0.0.1:3000` only. Point the proxy at it, set `ORIGIN` to the public https
-URL, and set `TRUST_PROXY=true`. Caddy example:
+**Option A: bundled Caddy.** Point your domain's DNS at the server, open ports 80 and 443, set
+`ORIGIN=https://your.domain` in `.env`, then:
 
-```
-music.example.com {
-	reverse_proxy 127.0.0.1:3000
-}
+```sh
+docker compose --profile caddy up -d
 ```
 
-The proxy must append the client address to `X-Forwarded-For`. Caddy, Traefik and nginx
-(`proxy_add_x_forwarded_for`) all do this.
+Caddy gets and renews the certificate automatically and proxies to the app.
+
+**Option B: your own reverse proxy** (Traefik, nginx, Coolify, Cloudflare Tunnel, …). Without the
+profile, the app listens on `127.0.0.1:3000` only (`HOST_PORT` changes the port). Point the proxy at
+it, keep `TRUST_PROXY=true`, and set `ORIGIN` to the public https URL. The proxy must append the
+client address to `X-Forwarded-For`; Caddy, Traefik and nginx (`proxy_add_x_forwarded_for`) all do.
+
+**Trying it locally over plain http:** set `ORIGIN=http://localhost:3000` and open that URL.
 
 ### Backups
 

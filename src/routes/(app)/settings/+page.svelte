@@ -85,7 +85,7 @@
 <section>
 	<h2>Password</h2>
 	<p class="muted">
-		To change the password, run <code>npx tsx scripts/hash-password.ts</code>, set the output as
+		To change the password, generate a new hash with <code>scripts/hash-password.ts</code> (see the README), set it as
 		<code>APP_PASSWORD_HASH</code>, and restart the container. Then use "Log out everywhere".
 	</p>
 </section>

@@ -18,6 +18,9 @@ COPY --from=build /app/package.json /app/server.js ./
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/build ./build
 COPY --from=build /app/drizzle ./drizzle
+# For generating APP_PASSWORD_HASH inside the container (plain Node runs it).
+COPY --from=build /app/scripts/hash-password.ts ./scripts/
+COPY --from=build /app/src/lib/server/auth/password.ts ./src/lib/server/auth/
 RUN mkdir -p /data && chown node:node /data
 USER node
 VOLUME /data
