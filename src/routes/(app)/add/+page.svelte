@@ -77,7 +77,7 @@
 		clearTimeout(searchTimer);
 		const value = input.trim();
 		if (value.length < 2 || looksLikeLink(value)) return;
-		searchTimer = setTimeout(submit, 300);
+		searchTimer = setTimeout(submit, 150);
 	}
 
 	async function addResult(r: Result) {

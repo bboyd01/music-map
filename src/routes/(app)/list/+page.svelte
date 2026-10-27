@@ -79,7 +79,7 @@
 		To Listen <span class="count">{data.counts.to_listen}</span>
 	</a>
 	<a href={href({ status: 'listened', sort: undefined })} aria-current={query.status === 'listened' ? 'page' : undefined}>
-		Listened <span class="count">{data.counts.listened}</span>
+		Library <span class="count">{data.counts.listened}</span>
 	</a>
 </nav>
 
@@ -160,7 +160,7 @@
 			<p>Nothing to listen to yet.</p>
 			<a class="btn btn-primary" href="/add">Add music</a>
 		{:else}
-			<p>Nothing marked as listened yet.</p>
+			<p>Nothing in your library yet. Mark something listened to add it here.</p>
 		{/if}
 	</div>
 {:else}
