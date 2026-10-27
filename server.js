@@ -4,11 +4,26 @@
 // the headers below are always overwritten.
 import process from 'node:process';
 
-const origin = process.env.ORIGIN ? new URL(process.env.ORIGIN) : undefined;
+/** Accepts "music.example.com", "https://music.example.com/", quoted values, etc. */
+function normalizeOrigin(raw) {
+	const value = raw.trim().replace(/^(['"])(.*)\1$/, '$2').trim();
+	if (!value) return undefined;
+	try {
+		const url = new URL(/^[a-z][a-z0-9+.-]*:\/\//i.test(value) ? value : `https://${value}`);
+		if (url.protocol !== 'http:' && url.protocol !== 'https:') throw new Error();
+		return url;
+	} catch {
+		console.error(`ORIGIN must be the app's public URL, like https://music.example.com (got ${JSON.stringify(raw)}).`);
+		process.exit(1);
+	}
+}
+
+const origin = process.env.ORIGIN ? normalizeOrigin(process.env.ORIGIN) : undefined;
 const PROTO = 'x-music-map-proto';
 const HOST = 'x-music-map-host';
 
 if (origin) {
+	process.env.ORIGIN = origin.origin;
 	process.env.PROTOCOL_HEADER = PROTO;
 	process.env.HOST_HEADER = HOST;
 }
