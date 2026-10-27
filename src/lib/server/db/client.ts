@@ -18,3 +18,7 @@ export function openDb(file: string, migrationsFolder = path.resolve('drizzle'))
 	migrate(db, { migrationsFolder });
 	return db;
 }
+
+/** A transaction handle; accepted anywhere a DB is, so helpers compose inside transactions. */
+export type Tx = Parameters<Parameters<DB['transaction']>[0]>[0];
+export type DbOrTx = DB | Tx;

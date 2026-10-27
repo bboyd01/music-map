@@ -19,3 +19,56 @@ export function releaseYear(value: string | null | undefined): number | undefine
 	const y = value ? Number(value.slice(0, 4)) : NaN;
 	return Number.isInteger(y) ? y : undefined;
 }
+
+const EDITION_WORDS =
+	'remaster|remastered|deluxe|expanded|anniversary|edition|version|mono|stereo|bonus|reissue';
+/** "(Remastered 2009)", "[Deluxe Edition]", "(Legacy Edition)" … */
+const EDITION_PARENS = new RegExp(`\\s*[([][^)\\]]*\\b(?:${EDITION_WORDS})\\b[^)\\]]*[)\\]]`, 'gi');
+/** "- Remastered 2009", "- 2011 Remaster", "- Mono Version" at the end. */
+const EDITION_DASH = new RegExp(`\\s+[-–—]\\s+[^-–—]*\\b(?:${EDITION_WORDS})\\b[^-–—]*$`, 'i');
+/** Apple appends these to single/EP album names. */
+const RELEASE_TYPE = /\s+-\s+(?:single|ep)$/i;
+const FEATURING = /\s*[([]\s*(?:feat\.?|ft\.?|featuring)\s[^)\]]*[)\]]|\s+(?:feat\.?|ft\.?|featuring)\s.*$/gi;
+
+/** Letters NFKD doesn't decompose. */
+const LETTERS: Record<string, string> = { æ: 'ae', ø: 'o', œ: 'oe', ß: 'ss', ð: 'd', þ: 'th', ł: 'l', đ: 'd', ı: 'i' };
+
+function fold(s: string): string {
+	return s
+		.normalize('NFKD')
+		.replace(/\p{M}/gu, '')
+		.toLowerCase()
+		.replace(/[æøœßðþłđı]/g, (c) => LETTERS[c])
+		.replace(/&/g, ' and ')
+		.replace(/[^\p{L}\p{N}]+/gu, ' ')
+		.trim();
+}
+
+export function normalizeArtistName(name: string): string {
+	return fold(name).replace(/^the /, '');
+}
+
+/** Folds a release/track title so that editions, remasters and feat. credits compare equal. */
+export function normalizeTitle(title: string): string {
+	const stripped = title
+		.replace(FEATURING, '')
+		.replace(EDITION_PARENS, '')
+		.replace(EDITION_DASH, '')
+		.replace(RELEASE_TYPE, '');
+	// Never fold a title down to nothing (e.g. an album literally called "(Deluxe)").
+	return fold(stripped) || fold(title);
+}
+
+/**
+ * Dedupe key used to match the same artist/album/track across providers. Tracks include their
+ * album so the same song on different releases stays distinct.
+ */
+export function normKey(
+	kind: 'artist' | 'album' | 'track',
+	parts: { name: string; artistName?: string; albumName?: string }
+): string {
+	if (kind === 'artist') return `artist|${normalizeArtistName(parts.name)}`;
+	const artist = normalizeArtistName(parts.artistName ?? '');
+	if (kind === 'album') return `album|${artist}|${normalizeTitle(parts.name)}`;
+	return `track|${artist}|${normalizeTitle(parts.albumName ?? '')}|${normalizeTitle(parts.name)}`;
+}

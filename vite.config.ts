@@ -17,7 +17,8 @@ export default defineConfig({
 					'default-src': ['self'],
 					'script-src': ['self'],
 					'style-src': ['self', 'unsafe-inline'],
-					'img-src': ['self', 'data:', 'blob:'],
+					// Search results show provider thumbnails before anything is downloaded.
+					'img-src': ['self', 'data:', 'blob:', 'https://*.mzstatic.com', 'https://i.scdn.co'],
 					'connect-src': ['self'],
 					'font-src': ['self'],
 					'object-src': ['none'],
