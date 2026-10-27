@@ -19,9 +19,11 @@ export interface ListRow {
 	eras: string[];
 }
 
-export type Facet = 'genre' | 'era' | 'instrument';
+import type { Facet } from './domain/tags';
 
-export interface TagChip {
+export type { Facet };
+
+interface TagChip {
 	name: string;
 	slug: string;
 	source: 'auto' | 'manual';

@@ -3,6 +3,7 @@
 	import Sheet from './Sheet.svelte';
 	import StarInput from './StarInput.svelte';
 	import TagEditor from './TagEditor.svelte';
+	import { api } from '../api';
 	import type { EntityView, ListRow } from '../types';
 
 	let {
@@ -26,8 +27,8 @@
 	let entity = $state<EntityView | null>(null);
 
 	async function loadEntity(id: number) {
-		const res = await fetch(`/api/entities/${id}`).catch(() => null);
-		if (res?.ok && item?.id === id) entity = (await res.json()).entity;
+		const res = await api<{ entity: EntityView }>(`/api/entities/${id}`).catch(() => null);
+		if (res && item?.id === id) entity = res.entity;
 	}
 
 	// Poll while enrichment is in progress so tags appear without a reload.
@@ -39,7 +40,7 @@
 	});
 
 	async function refreshDetails() {
-		await fetch(`/api/entities/${item!.id}/enrich`, { method: 'POST' }).catch(() => null);
+		await api(`/api/entities/${item!.id}/enrich`, { method: 'POST' }).catch(() => null);
 		await loadEntity(item!.id);
 	}
 
@@ -64,16 +65,11 @@
 		saving = true;
 		errorMessage = '';
 		try {
-			const res = await fetch(`/api/list/${item!.id}`, {
-				method,
-				headers: body ? { 'content-type': 'application/json' } : undefined,
-				body: body ? JSON.stringify(body) : undefined
-			});
-			if (!res.ok) throw new Error((await res.json().catch(() => null))?.error ?? `HTTP ${res.status}`);
+			await api(`/api/list/${item!.id}`, { method, body });
 			open = false;
 			onchange();
 		} catch (err) {
-			errorMessage = navigator.onLine ? `Couldn't save: ${(err as Error).message}` : "You're offline. Changes need a connection.";
+			errorMessage = (err as Error).message;
 		} finally {
 			saving = false;
 		}

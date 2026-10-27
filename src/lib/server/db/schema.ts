@@ -120,6 +120,5 @@ export const kv = sqliteTable('kv', {
 });
 
 export type Entity = typeof entities.$inferSelect;
-export type ListItem = typeof listItems.$inferSelect;
 export type Tag = typeof tags.$inferSelect;
 export type Job = typeof jobs.$inferSelect;

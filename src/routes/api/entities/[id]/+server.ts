@@ -1,13 +1,8 @@
-import { error, json } from '@sveltejs/kit';
+import { json } from '@sveltejs/kit';
 import { getDb } from '#lib/server/db/index.ts';
+import { idParam as entityId } from '#lib/server/params.ts';
 import { EntityPatch, getEntityView, updateEntity } from '#lib/server/library/entity.ts';
 import type { RequestHandler } from './$types';
-
-function entityId(raw: string) {
-	const id = Number(raw);
-	if (!Number.isSafeInteger(id) || id <= 0) error(404, 'Not found');
-	return id;
-}
 
 export const GET: RequestHandler = ({ params }) => {
 	const entity = getEntityView(getDb(), entityId(params.id));

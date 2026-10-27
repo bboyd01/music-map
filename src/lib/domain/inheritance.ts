@@ -37,8 +37,3 @@ export function effectiveTags(chain: Level[]): Record<Facet, EffectiveFacet> {
 	}
 	return result;
 }
-
-/** Ancestor chain for an entity, nearest first: track → album → artist. */
-export function ancestorIds(e: { id: number; albumId: number | null; artistId: number | null }): number[] {
-	return [e.id, e.albumId, e.artistId].filter((x): x is number => x !== null);
-}

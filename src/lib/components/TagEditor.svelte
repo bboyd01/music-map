@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { api } from '../api';
 	import type { EntityView, Facet, FacetView } from '../types';
 
 	let {
@@ -23,15 +24,13 @@
 		busy = true;
 		error = '';
 		try {
-			const res = await fetch(`/api/entities/${entityId}`, {
+			const res = await api<{ entity: EntityView }>(`/api/entities/${entityId}`, {
 				method: 'PATCH',
-				headers: { 'content-type': 'application/json' },
-				body: JSON.stringify({ tags: { [facet]: next } })
+				body: { tags: { [facet]: next } }
 			});
-			if (!res.ok) throw new Error((await res.json().catch(() => null))?.error ?? `HTTP ${res.status}`);
-			onchange((await res.json()).entity);
+			onchange(res.entity);
 		} catch (err) {
-			error = navigator.onLine ? `Couldn't save: ${(err as Error).message}` : "You're offline.";
+			error = (err as Error).message;
 		} finally {
 			busy = false;
 		}
@@ -54,8 +53,8 @@
 	function oninput() {
 		clearTimeout(timer);
 		timer = setTimeout(async () => {
-			const res = await fetch(`/api/tags?facet=${facet}&q=${encodeURIComponent(text.trim())}`).catch(() => null);
-			if (res?.ok) suggestions = ((await res.json()).tags as { name: string }[]).filter((t) => !names.includes(t.name));
+			const res = await api<{ tags: { name: string }[] }>(`/api/tags?facet=${facet}&q=${encodeURIComponent(text.trim())}`).catch(() => null);
+			if (res) suggestions = res.tags.filter((t) => !names.includes(t.name));
 		}, 150);
 	}
 

@@ -1,11 +1,11 @@
 import { z } from 'zod';
-import { SlidingWindowLimiter, TtlCache, fetchJson, type FetchFn } from './http';
+import { SlidingWindowLimiter, fetchJson, type FetchFn } from './http';
 import { ProviderError } from './types';
 
 const BASE = 'https://musicbrainz.org/ws/2';
 
 /** MusicBrainz allows 1 request/second per client. One limiter for the whole process. */
-export const mbLimiter = new SlidingWindowLimiter(1, 1000);
+const mbLimiter = new SlidingWindowLimiter(1, 1000);
 
 const ArtistCredit = z.array(
 	z.object({ name: z.string(), artist: z.object({ id: z.string(), name: z.string(), type: z.string().nullish() }) })
@@ -100,7 +100,7 @@ const ArtistSearch = z.object({
 	artists: z.array(z.object({ id: z.string(), name: z.string(), score: z.number().default(0), type: z.string().nullish() }))
 });
 
-export interface MbPerformer {
+interface MbPerformer {
 	artistId: string;
 	name: string;
 	instruments: string[];
@@ -127,7 +127,7 @@ export interface MbArtist {
 const credit = (c: z.infer<typeof ArtistCredit>) => c.map((a) => ({ id: a.artist.id, name: a.artist.name, credited: a.name }));
 
 /** Lucene-escapes a value for a MusicBrainz search query. */
-export function luceneEscape(s: string): string {
+function luceneEscape(s: string): string {
 	return s.replace(/([+\-!(){}[\]^"~*?:\\/]|&&|\|\|)/g, '\\$1');
 }
 
@@ -155,7 +155,7 @@ function composersOf(relations: Relation[]) {
 	return out;
 }
 
-export interface MusicBrainzOptions {
+interface MusicBrainzOptions {
 	userAgent: string;
 	fetchImpl?: FetchFn;
 	limiter?: SlidingWindowLimiter;
@@ -166,7 +166,6 @@ export interface MusicBrainzOptions {
 export class MusicBrainzClient {
 	private fetchImpl: FetchFn;
 	private limiter: SlidingWindowLimiter;
-	private cache = new TtlCache<unknown>(60 * 60 * 1000, 300);
 
 	constructor(private opts: MusicBrainzOptions) {
 		if (!opts.userAgent) throw new Error('MusicBrainz requires a User-Agent (MB_USER_AGENT)');
@@ -176,23 +175,18 @@ export class MusicBrainzClient {
 
 	private async get<T extends z.ZodType>(path: string, params: Record<string, string>, schema: T): Promise<z.infer<T> | null> {
 		const url = `${BASE}/${path}?${new URLSearchParams({ ...params, fmt: 'json' })}`;
-		const hit = this.cache.get(url);
-		if (hit !== undefined) return hit as z.infer<T> | null;
 		const init = { headers: { 'user-agent': this.opts.userAgent, accept: 'application/json' } };
 		const call = async () => {
 			await this.limiter.acquire();
 			return fetchJson('musicbrainz', url, schema, { fetchImpl: this.fetchImpl, init, timeoutMs: 15_000 });
 		};
-		let data: z.infer<T> | null;
 		try {
-			data = await call();
+			return await call();
 		} catch (err) {
 			if (!(err instanceof ProviderError && err.status === 503)) throw err;
 			await new Promise((r) => setTimeout(r, this.opts.retryDelayMs ?? 2000));
-			data = await call();
+			return call();
 		}
-		this.cache.set(url, data);
-		return data;
 	}
 
 	async searchReleaseGroups(title: string, artist: string) {

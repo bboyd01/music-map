@@ -5,7 +5,7 @@ import type { DB } from '../db/client';
 import { entities, externalIds, listItems } from '../db/schema';
 import type { FetchFn } from '../providers/http';
 import { resolveInput, type Providers } from '../providers/resolve';
-import { ProviderError, type ListKind, type ProviderName, type ProviderRef, type SearchResult } from '../providers/types';
+import { PROVIDER_LABEL as LABEL, ProviderError, type ListKind, type ProviderRef, type SearchResult } from '../providers/types';
 import type { EnrichPayload } from '../enrich/pipeline';
 import { addItemToLibrary, type AddOutcome } from './add';
 
@@ -19,9 +19,7 @@ export interface LibraryDeps {
 	enqueueEnrich?: (payload: EnrichPayload) => void;
 }
 
-const LABEL: Record<ProviderName, string> = { apple: 'Apple Music', spotify: 'Spotify' };
-
-export type ResolveResponse =
+type ResolveResponse =
 	| { type: 'item'; ref: ProviderRef & { kind: ListKind }; name: string; artistName: string }
 	| { type: 'results'; query: string; kind: ListKind; results: (SearchResult & { inLibrary: boolean })[]; warnings: string[] }
 	| { type: 'error'; message: string };
@@ -46,7 +44,7 @@ export async function resolveForAdd(deps: LibraryDeps, input: string, kind: List
 }
 
 /** Searches Apple (always) and Spotify (if configured) in parallel; Spotify duplicates of Apple results are dropped. */
-export async function searchProviders(deps: LibraryDeps, query: string, kind: ListKind): Promise<ResolveResponse> {
+async function searchProviders(deps: LibraryDeps, query: string, kind: ListKind): Promise<ResolveResponse> {
 	const active = [deps.providers.apple, deps.providers.spotify].filter((p) => p !== null);
 	const settled = await Promise.allSettled(active.map((p) => p.search(query, kind)));
 	const warnings: string[] = [];
@@ -91,7 +89,7 @@ function listedExternalIds(db: DB, results: SearchResult[]): Set<string> {
 	return new Set(rows.map((r) => `${r.provider}:${r.id}`));
 }
 
-export type CommitResult =
+type CommitResult =
 	| {
 			ok: true;
 			entityId: number;
@@ -126,10 +124,12 @@ export async function commitAdd(deps: LibraryDeps, ref: ProviderRef & { kind: Li
 
 	const result = addItemToLibrary(deps.db, item);
 
+	let { artworkPath } = result;
 	let artworkFailed = false;
 	if (item.artworkUrl && result.artworkTargets.length) {
 		try {
 			const file = await downloadArtwork(item.artworkUrl, deps.artworkDir, { fetchImpl: deps.fetchImpl });
+			artworkPath ??= file;
 			deps.db
 				.update(entities)
 				.set({ artworkPath: file })
@@ -151,16 +151,11 @@ export async function commitAdd(deps: LibraryDeps, ref: ProviderRef & { kind: Li
 		});
 	}
 
-	const listStatus =
-		deps.db.select({ s: listItems.status }).from(listItems).where(eq(listItems.entityId, result.entityId)).get()?.s ?? 'to_listen';
-	const artworkPath =
-		deps.db.select({ a: entities.artworkPath }).from(entities).where(eq(entities.id, result.entityId)).get()?.a ?? null;
-
 	const message = {
 		added: `Added ${item.name} to To Listen.`,
 		promoted: `Added ${item.name} to To Listen.`,
-		existing: `${item.name} is already in your list${listStatus === 'listened' ? ' (Listened)' : ''}.`
+		existing: `${item.name} is already in your list${result.listStatus === 'listened' ? ' (Listened)' : ''}.`
 	}[result.outcome];
 	const { artworkTargets: _, ...rest } = result;
-	return { ok: true, ...rest, name: item.name, message, listStatus, artworkPath };
+	return { ok: true, ...rest, artworkPath, name: item.name, message };
 }

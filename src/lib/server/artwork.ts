@@ -11,7 +11,7 @@ export const ARTWORK_FILE = /^[a-f0-9]{32}\.(jpg|png|webp)$/;
 export const ARTWORK_MIME: Record<string, string> = { jpg: 'image/jpeg', png: 'image/png', webp: 'image/webp' };
 
 /** Only fetch artwork from known image CDNs (Apple, Spotify, Cover Art Archive → archive.org). */
-export function isAllowedArtworkHost(url: URL): boolean {
+function isAllowedArtworkHost(url: URL): boolean {
 	if (url.protocol !== 'https:') return false;
 	const h = url.hostname.toLowerCase();
 	return (

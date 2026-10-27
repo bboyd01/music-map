@@ -1,7 +1,7 @@
 import type { FetchFn } from './http';
 import { parseLink } from './link';
 import { resolveSpotifyShortLink } from './shortlink';
-import { ProviderError, type MusicProvider, type NormalizedItem, type ProviderName, type ProviderRef } from './types';
+import { PROVIDER_LABEL as LABEL, ProviderError, type MusicProvider, type NormalizedItem, type ProviderRef } from './types';
 
 export interface Providers {
 	apple: MusicProvider;
@@ -9,15 +9,13 @@ export interface Providers {
 	spotify: MusicProvider | null;
 }
 
-export type Resolved =
+type Resolved =
 	| { type: 'item'; ref: ProviderRef; item: NormalizedItem }
 	| { type: 'text'; query: string }
 	| { type: 'error'; message: string };
 
 export const SPOTIFY_DISABLED =
 	"Spotify isn't set up on this server (SPOTIFY_CLIENT_ID / SPOTIFY_CLIENT_SECRET). Use an Apple Music link or search instead.";
-
-const LABEL: Record<ProviderName, string> = { apple: 'Apple Music', spotify: 'Spotify' };
 
 /** Resolves pasted input to normalized metadata, a search query, or a user-facing error. */
 export async function resolveInput(

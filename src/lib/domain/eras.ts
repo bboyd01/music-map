@@ -1,7 +1,7 @@
 import { slugify } from './tags';
 
 /** Seeded period vocabulary (section 6.3). `to` is exclusive. */
-export const PERIODS = [
+const PERIODS = [
 	{ name: 'Medieval', from: -Infinity, to: 1400 },
 	{ name: 'Renaissance', from: 1400, to: 1600 },
 	{ name: 'Baroque', from: 1600, to: 1750 },
@@ -11,7 +11,7 @@ export const PERIODS = [
 	{ name: 'Contemporary', from: 1975, to: Infinity }
 ] as const;
 
-export const FIRST_DECADE = 1920;
+const FIRST_DECADE = 1920;
 
 export function decades(until = new Date().getFullYear()): string[] {
 	const out: string[] = [];

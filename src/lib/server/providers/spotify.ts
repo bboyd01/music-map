@@ -70,7 +70,7 @@ export function memoryTokenStore(): TokenStore {
 	return { get: () => value, set: (v) => void (value = v) };
 }
 
-export interface SpotifyOptions {
+interface SpotifyOptions {
 	clientId: string;
 	clientSecret: string;
 	tokenStore?: TokenStore;

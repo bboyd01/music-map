@@ -4,6 +4,7 @@
 	import Artwork from '#lib/components/Artwork.svelte';
 	import ListItemSheet from '#lib/components/ListItemSheet.svelte';
 	import Stars from '#lib/components/Stars.svelte';
+	import { api } from '#lib/api.ts';
 	import type { ListRow } from '#lib/types.ts';
 	import type { PageProps } from './$types';
 
@@ -59,13 +60,16 @@
 
 	const enriching = (item: ListRow) => item.enrichStatus === 'pending' || item.enrichStatus === 'running';
 
-	// While anything is still being enriched, refresh every few seconds (stops after ~3 minutes).
-	let polls = 0;
+	// While items are enriching, poll just their status; reload the list only when one finishes.
+	const pendingIds = $derived(data.items.filter(enriching).map((i) => i.id));
+	let polls = $state(0);
 	$effect(() => {
-		if (!data.items.some(enriching) || polls > 70) return;
-		const t = setTimeout(() => {
+		const ids = pendingIds;
+		if (!ids.length || polls > 70) return;
+		const t = setTimeout(async () => {
+			const { pending } = await api<{ pending: number[] }>(`/api/entities/status?ids=${ids.join(',')}`).catch(() => ({ pending: ids }));
+			if (pending.length < ids.length) invalidate('app:list');
 			polls++;
-			invalidate('app:list');
 		}, 2500);
 		return () => clearTimeout(t);
 	});
@@ -161,15 +165,15 @@
 			<li id="item-{item.id}" class:highlight={item.id === highlight}>
 				<button type="button" class="card" onclick={() => open(item)}>
 					<Artwork path={item.artworkPath} name={item.name} size={64} />
-					<span class="text">
-						<span class="title">{item.name}</span>
-						<span class="sub">{item.artistName ?? 'Unknown artist'}{item.releaseDate ? ` · ${year(item.releaseDate)}` : ''}</span>
-						<span class="sub">
+					<span class="row-text">
+						<span class="row-title">{item.name}</span>
+						<span class="row-sub">{item.artistName ?? 'Unknown artist'}{item.releaseDate ? ` · ${year(item.releaseDate)}` : ''}</span>
+						<span class="row-sub">
 							{#if item.kind === 'track'}<span class="badge">Track</span>{item.albumName ? ` ${item.albumName}` : ''}{/if}
 							{#if item.status === 'listened'}<Stars rating={item.rating} />{/if}
 						</span>
 						{#if item.genres.length || item.eras.length || enriching(item)}
-							<span class="tagline"
+							<span class="tagline truncate"
 								>{[...item.genres.slice(0, 2), ...eraOrder(item.eras)].join(' · ')}{#if enriching(item)}<span class="enriching"
 										>{item.genres.length || item.eras.length ? ' · ' : ''}Enriching…</span
 									>{/if}</span
@@ -243,31 +247,9 @@
 		text-align: left;
 		cursor: pointer;
 	}
-	.text {
-		display: flex;
-		flex-direction: column;
-		min-width: 0;
-		gap: 2px;
-	}
-	.title {
-		font-weight: 600;
-	}
-	.title,
-	.sub {
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-	}
-	.sub {
-		font-size: 0.875rem;
-		color: var(--muted);
-	}
 	.tagline {
 		font-size: 0.8rem;
 		color: var(--muted);
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
 	}
 	.enriching {
 		animation: pulse 1.4s ease-in-out infinite;

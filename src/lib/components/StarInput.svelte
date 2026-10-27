@@ -1,9 +1,8 @@
 <script lang="ts">
 	import { formatStars, starFills } from '../domain/rating';
+	import StarIcon from './StarIcon.svelte';
 
 	let { value = $bindable(null) }: { value: number | null } = $props();
-
-	const STAR = 'M12 2.5l2.9 6.1 6.6.8-4.9 4.5 1.3 6.6L12 17.2l-5.9 3.3 1.3-6.6L2.5 9.4l6.6-.8z';
 
 	function onkeydown(e: KeyboardEvent) {
 		const step = { ArrowRight: 1, ArrowUp: 1, ArrowLeft: -1, ArrowDown: -1 }[e.key];
@@ -27,13 +26,7 @@
 	>
 		{#each starFills(value) as fill, i (i)}
 			<span class="star">
-				<svg viewBox="0 0 24 24" aria-hidden="true">
-					<defs><clipPath id="in-half-{i}"><rect width="12" height="24" /></clipPath></defs>
-					<path class="bg" d={STAR} />
-					{#if fill !== 'empty'}
-						<path class="fg" clip-path={fill === 'half' ? `url(#in-half-${i})` : undefined} d={STAR} />
-					{/if}
-				</svg>
+				<StarIcon {fill} />
 				<button type="button" class="half left" tabindex="-1" aria-label="{i}½ stars" onclick={() => (value = i * 2 + 1)}></button>
 				<button type="button" class="half right" tabindex="-1" aria-label="{i + 1} stars" onclick={() => (value = i * 2 + 2)}></button>
 			</span>
@@ -66,19 +59,6 @@
 		position: relative;
 		width: 48px;
 		height: 48px;
-	}
-	svg {
-		width: 100%;
-		height: 100%;
-		pointer-events: none;
-	}
-	.bg {
-		fill: var(--surface-2);
-		stroke: var(--border);
-		stroke-width: 0.8;
-	}
-	.fg {
-		fill: var(--accent);
 	}
 	.half {
 		position: absolute;

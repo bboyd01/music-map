@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ancestorIds, effectiveTags, type Level, type TagRef } from './inheritance';
+import { effectiveTags, type Level, type TagRef } from './inheritance';
 
 const tag = (facet: TagRef['facet'], name: string, source: TagRef['source'] = 'auto'): TagRef => ({ facet, name, slug: name, source });
 
@@ -28,8 +28,4 @@ describe('effectiveTags', () => {
 		expect(effectiveTags([{ entityId: 9, kind: 'album', tags: [] }]).genre).toEqual({ tags: [], inheritedFrom: null });
 	});
 
-	it('builds the ancestor chain', () => {
-		expect(ancestorIds({ id: 3, albumId: 2, artistId: 1 })).toEqual([3, 2, 1]);
-		expect(ancestorIds({ id: 2, albumId: null, artistId: 1 })).toEqual([2, 1]);
-	});
 });

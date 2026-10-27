@@ -2,10 +2,10 @@ import { and, asc, eq, inArray, sql } from 'drizzle-orm';
 import { eraVocabulary } from '../../domain/eras';
 import { effectiveTags, type EffectiveFacet, type TagRef } from '../../domain/inheritance';
 import { cleanTagName, slugify, type Facet } from '../../domain/tags';
-import type { DbOrTx } from '../db/client';
+import { escapeLike, type DbOrTx } from '../db/client';
 import { entities, entityTags, tags } from '../db/schema';
 
-export function upsertTag(db: DbOrTx, facet: Facet, rawName: string): number | null {
+function upsertTag(db: DbOrTx, facet: Facet, rawName: string): number | null {
 	const name = cleanTagName(facet, rawName);
 	const slug = slugify(name);
 	if (!slug) return null;
@@ -115,14 +115,15 @@ export function effectiveFor(db: DbOrTx, entityIds: number[]): Map<number, Effec
 
 /** Autocomplete: tags in a facet matching a prefix/substring, most used first. */
 export function searchTags(db: DbOrTx, facet: Facet, q: string, limit = 12) {
-	const pattern = `%${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
+	const escaped = escapeLike(q);
+	const pattern = `%${escaped}%`;
 	return db
 		.select({ name: tags.name, slug: tags.slug, uses: sql<number>`count(${entityTags.entityId})` })
 		.from(tags)
 		.leftJoin(entityTags, eq(entityTags.tagId, tags.id))
 		.where(and(eq(tags.facet, facet), q ? sql`${tags.name} like ${pattern} escape '\\'` : undefined))
 		.groupBy(tags.id)
-		.orderBy(sql`${tags.name} like ${q.replace(/[\\%_]/g, (c) => `\\${c}`) + '%'} escape '\\' desc`, sql`count(${entityTags.entityId}) desc`, asc(tags.name))
+		.orderBy(sql`${tags.name} like ${escaped + '%'} escape '\\' desc`, sql`count(${entityTags.entityId}) desc`, asc(tags.name))
 		.limit(limit)
 		.all();
 }

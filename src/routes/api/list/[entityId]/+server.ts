@@ -1,13 +1,8 @@
-import { error, json } from '@sveltejs/kit';
+import { json } from '@sveltejs/kit';
 import { getDb } from '#lib/server/db/index.ts';
+import { idParam as entityId } from '#lib/server/params.ts';
 import { ListPatch, promoteToList, removeFromList, updateListItem } from '#lib/server/library/list.ts';
 import type { RequestHandler } from './$types';
-
-function entityId(raw: string) {
-	const id = Number(raw);
-	if (!Number.isSafeInteger(id) || id <= 0) error(404, 'Not found');
-	return id;
-}
 
 /** Update status / rating / review / listened date. */
 export const PATCH: RequestHandler = async ({ params, request }) => {

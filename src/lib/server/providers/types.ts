@@ -1,6 +1,7 @@
 export type EntityKind = 'artist' | 'album' | 'track';
 export type ListKind = 'album' | 'track';
 export type ProviderName = 'apple' | 'spotify';
+export const PROVIDER_LABEL: Record<ProviderName, string> = { apple: 'Apple Music', spotify: 'Spotify' };
 
 /** Points at one item on one provider. `country` is the Apple storefront. */
 export interface ProviderRef {
@@ -10,7 +11,7 @@ export interface ProviderRef {
 	country?: string;
 }
 
-export interface ArtistRef {
+interface ArtistRef {
 	id?: string;
 	name: string;
 }
@@ -26,7 +27,7 @@ interface Base {
 	artworkUrl?: string;
 }
 
-export interface NormalizedArtist extends Base {
+interface NormalizedArtist extends Base {
 	kind: 'artist';
 }
 

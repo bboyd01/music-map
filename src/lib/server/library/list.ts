@@ -2,14 +2,13 @@ import { and, asc, desc, eq, or, sql, type SQL } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/sqlite-core';
 import { z } from 'zod';
 import { clampRating } from '../../domain/rating';
-import type { DbOrTx } from '../db/client';
+import { escapeLike, type DbOrTx } from '../db/client';
 import { entities, listItems } from '../db/schema';
 import { slugify } from '../../domain/tags';
 import type { FacetOption, ListRow } from '../../types';
 import { effectiveFor } from '../enrich/tags';
 import { collectGarbage } from './entities';
 
-export type { ListRow };
 
 export const ListQuery = z.object({
 	status: z.enum(['to_listen', 'listened']).default('to_listen'),
@@ -27,8 +26,6 @@ export type ListQuery = z.infer<typeof ListQuery>;
 
 const artist = alias(entities, 'artist');
 const album = alias(entities, 'album');
-
-const escapeLike = (s: string) => s.replace(/[\\%_]/g, (c) => `\\${c}`);
 
 export function getList(db: DbOrTx, query: ListQuery): ListRow[] {
 	return getListWithOptions(db, query).items;

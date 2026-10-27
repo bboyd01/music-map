@@ -2,8 +2,8 @@ import type { DB } from '../db/client';
 import type { Job } from '../db/schema';
 import { claimNext, completeJob, failJob, msUntilNextJob, pruneJobs, recoverInterrupted, type JobType } from './queue';
 
-export type JobHandler = (job: Job) => Promise<void>;
-export interface WorkerHooks {
+type JobHandler = (job: Job) => Promise<void>;
+interface WorkerHooks {
 	/** Called when a job gives up for good (after MAX_ATTEMPTS). */
 	onFailed?: (job: Job, error: string) => void;
 	/** Called after each failed attempt that will be retried. */

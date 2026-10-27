@@ -36,7 +36,7 @@ export function splitArtists(credit: string): string[] {
 		.filter(Boolean);
 }
 
-export interface Candidate {
+interface Candidate {
 	id: string;
 	title: string;
 	artists: string[];
@@ -45,7 +45,7 @@ export interface Candidate {
 	score: number;
 }
 
-export interface Wanted {
+interface Wanted {
 	title: string;
 	artist: string;
 	year?: number;
@@ -71,7 +71,7 @@ export function matchConfidence(wanted: Wanted, c: Candidate): number {
 	return titleScore * yearFactor * (0.7 + 0.3 * (c.score / 100));
 }
 
-export const MATCH_THRESHOLD = 0.7;
+const MATCH_THRESHOLD = 0.7;
 
 /** Best candidate above the threshold, or undefined (left unmatched for manual re-match). */
 export function bestMatch(wanted: Wanted, candidates: Candidate[]): { candidate: Candidate; confidence: number } | undefined {

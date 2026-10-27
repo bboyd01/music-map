@@ -34,7 +34,7 @@ export function authenticate(cookies: Cookies): boolean {
 	return true;
 }
 
-export type LoginResult = { ok: true } | { ok: false; status: 401 | 429; message: string };
+type LoginResult = { ok: true } | { ok: false; status: 401 | 429; message: string };
 
 export async function attemptLogin(event: RequestEvent, password: string): Promise<LoginResult> {
 	const ip = clientIp(event.request.headers, () => event.getClientAddress(), TRUST_PROXY);

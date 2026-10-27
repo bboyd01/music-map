@@ -9,7 +9,7 @@ export const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const REFRESH_AFTER_MS = 60 * 60 * 1000;
 
 /** Random 256-bit token; only its keyed hash is ever stored. */
-export function generateToken(): string {
+function generateToken(): string {
 	return randomBytes(32).toString('base64url');
 }
 

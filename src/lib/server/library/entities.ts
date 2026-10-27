@@ -1,11 +1,11 @@
-import { and, eq, or, sql } from 'drizzle-orm';
+import { and, eq, or } from 'drizzle-orm';
 import type { DbOrTx as DB } from '../db/client';
 import { entities, externalIds, listItems, type Entity } from '../db/schema';
 
 type Provider = (typeof externalIds.$inferInsert)['provider'];
 type Kind = Entity['kind'];
 
-export interface EntityInput {
+interface EntityInput {
 	kind: Kind;
 	name: string;
 	normKey: string;
@@ -16,7 +16,7 @@ export interface EntityInput {
 	durationMs?: number | null;
 }
 
-export function findByExternalId(db: DB, provider: Provider, externalId: string): Entity | undefined {
+function findByExternalId(db: DB, provider: Provider, externalId: string): Entity | undefined {
 	return db
 		.select({ e: entities })
 		.from(externalIds)
@@ -25,7 +25,7 @@ export function findByExternalId(db: DB, provider: Provider, externalId: string)
 		.get()?.e;
 }
 
-export function findByNormKey(db: DB, kind: Kind, normKey: string): Entity | undefined {
+function findByNormKey(db: DB, kind: Kind, normKey: string): Entity | undefined {
 	return db
 		.select()
 		.from(entities)
@@ -34,7 +34,7 @@ export function findByNormKey(db: DB, kind: Kind, normKey: string): Entity | und
 		.get();
 }
 
-export function attachExternalId(db: DB, entityId: number, ext: NonNullable<EntityInput['external']>): boolean {
+function attachExternalId(db: DB, entityId: number, ext: NonNullable<EntityInput['external']>): boolean {
 	const res = db
 		.insert(externalIds)
 		.values({ entityId, provider: ext.provider, externalId: ext.id, url: ext.url })
@@ -110,6 +110,3 @@ export function collectGarbage(db: DB, id: number): number[] {
 	}
 	return deleted;
 }
-
-export const touch = (db: DB, id: number) =>
-	db.update(entities).set({ updatedAt: sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))` }).where(eq(entities.id, id)).run();

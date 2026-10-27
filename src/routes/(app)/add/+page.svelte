@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { api } from '#lib/api.ts';
 	import Artwork from '#lib/components/Artwork.svelte';
 
 	type Kind = 'album' | 'track';
@@ -37,18 +38,6 @@
 	const listHref = (a: Added) => `/list?status=${a.listStatus}&highlight=${a.entityId}`;
 	const sourceLabel = { apple: 'Apple Music', spotify: 'Spotify' };
 
-	async function post<T>(url: string, body: unknown): Promise<T> {
-		let res: Response;
-		try {
-			res = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
-		} catch {
-			throw new Error(navigator.onLine ? 'Network error. Try again.' : "You're offline. Adding needs a connection.");
-		}
-		const data = await res.json().catch(() => null);
-		if (!res.ok) throw new Error(data?.message ?? data?.error ?? `Something went wrong (HTTP ${res.status}).`);
-		return data as T;
-	}
-
 	async function submit(e?: SubmitEvent) {
 		e?.preventDefault();
 		const value = input.trim();
@@ -58,13 +47,13 @@
 		warnings = [];
 		added = null;
 		try {
-			const r = await post<
+			const r = await api<
 				| { type: 'item'; ref: Ref; name: string }
 				| { type: 'results'; query: string; results: Result[]; warnings: string[] }
-			>('/api/add/resolve', { input: value, kind });
+			>('/api/add/resolve', { body: { input: value, kind } });
 			if (r.type === 'item') {
 				results = null;
-				added = await post<Added>('/api/add/commit', r.ref);
+				added = await api<Added>('/api/add/commit', { body: r.ref });
 				input = '';
 			} else {
 				results = r.results;
@@ -82,7 +71,7 @@
 		adding = key(r);
 		errorMessage = '';
 		try {
-			const a = await post<Added>('/api/add/commit', { provider: r.provider, kind: r.kind, id: r.id, country: r.country });
+			const a = await api<Added>('/api/add/commit', { body: { provider: r.provider, kind: r.kind, id: r.id, country: r.country } });
 			addedIds[key(r)] = a;
 			r.inLibrary = true;
 		} catch (err) {
@@ -183,10 +172,10 @@
 				{@const done = addedIds[key(r)]}
 				<li>
 					<Artwork url={r.artworkUrl} name={r.name} size={56} />
-					<div class="text">
-						<span class="title">{r.name}</span>
-						<span class="sub">{r.artistName}{r.releaseDate ? ` · ${r.releaseDate.slice(0, 4)}` : ''}</span>
-						<span class="sub">{r.albumName ? `${r.albumName} · ` : ''}{sourceLabel[r.provider]}</span>
+					<div class="row-text">
+						<span class="row-title">{r.name}</span>
+						<span class="row-sub">{r.artistName}{r.releaseDate ? ` · ${r.releaseDate.slice(0, 4)}` : ''}</span>
+						<span class="row-sub">{r.albumName ? `${r.albumName} · ` : ''}{sourceLabel[r.provider]}</span>
 					</div>
 					{#if done}
 						<a class="btn small" href={listHref(done)}>View</a>
@@ -276,25 +265,6 @@
 		gap: 12px;
 		padding: 8px 0;
 		border-bottom: 1px solid var(--border);
-	}
-	.text {
-		flex: 1;
-		min-width: 0;
-		display: flex;
-		flex-direction: column;
-	}
-	.title {
-		font-weight: 600;
-	}
-	.title,
-	.sub {
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-	}
-	.sub {
-		font-size: 0.85rem;
-		color: var(--muted);
 	}
 	.small {
 		flex: none;

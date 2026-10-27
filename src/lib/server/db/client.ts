@@ -19,6 +19,9 @@ export function openDb(file: string, migrationsFolder = path.resolve('drizzle'))
 	return db;
 }
 
+/** Escapes `%`, `_` and `\\` for a LIKE pattern used with `escape '\\'`. */
+export const escapeLike = (s: string) => s.replace(/[\\%_]/g, (c) => `\\${c}`);
+
 /** A transaction handle; accepted anywhere a DB is, so helpers compose inside transactions. */
-export type Tx = Parameters<Parameters<DB['transaction']>[0]>[0];
+type Tx = Parameters<Parameters<DB['transaction']>[0]>[0];
 export type DbOrTx = DB | Tx;

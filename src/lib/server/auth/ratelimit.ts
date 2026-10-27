@@ -1,4 +1,4 @@
-export interface RateLimitOptions {
+interface RateLimitOptions {
 	/** Failed attempts allowed per IP within the window. */
 	maxAttempts: number;
 	windowMs: number;

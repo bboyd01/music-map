@@ -98,7 +98,7 @@ function toItem(r: Result): NormalizedItem | null {
 	return null;
 }
 
-export interface AppleOptions {
+interface AppleOptions {
 	fetchImpl?: FetchFn;
 	/** Default storefront when a link doesn't carry one. */
 	country?: string;
