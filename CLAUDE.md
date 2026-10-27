@@ -3,9 +3,10 @@
 Single-user, self-hosted music relationship map + listening tracker. Full spec: `PLAN.md` (read it before starting; work one milestone at a time).
 
 ## Stack
-SvelteKit + TypeScript (`adapter-node`), SQLite via `better-sqlite3` + Drizzle, Cytoscape.js, vitest. One Docker image, one `/data` volume. No extra services.
+SvelteKit 3 + TypeScript (`adapter-node`), SQLite via `better-sqlite3` + Drizzle, Cytoscape.js, vitest. One Docker image, one `/data` volume. No extra services.
 
 ## Rules
+- SvelteKit 3 specifics: config lives in `vite.config.ts` (no `svelte.config.js`); env vars are declared in `src/env.ts` and imported from `$app/env/private`; import lib code via `#lib/...` with the file extension (e.g. `#lib/server/db/index.ts`).
 - Keep it lean: don't add dependencies, services, or abstractions the plan doesn't call for. Ask first if you think one is needed.
 - Mobile-first. Check layouts at 390px before wider screens.
 - All routes except `/login`, `/healthz`, and static PWA assets require a session. Never expose artwork or API routes unauthenticated.
@@ -21,6 +22,8 @@ SvelteKit + TypeScript (`adapter-node`), SQLite via `better-sqlite3` + Drizzle, 
 ## Commands
 - `npm run dev` — dev server
 - `npm run test` — vitest
+- `npm run check` — svelte-check / TypeScript
+- `npm run build && npm start` — production build, served by `server.js`
 - `npm run db:generate` — generate Drizzle migration
 - `npx tsx scripts/hash-password.ts` — generate `APP_PASSWORD_HASH`
 

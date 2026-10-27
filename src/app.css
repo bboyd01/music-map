@@ -1,0 +1,127 @@
+:root {
+	--bg: #f7f6f3;
+	--surface: #ffffff;
+	--surface-2: #efede8;
+	--text: #1b1b1d;
+	--muted: #6b6a70;
+	--border: #dddad3;
+	--accent: #c2410c;
+	--accent-text: #ffffff;
+	--danger: #b42318;
+	--radius: 12px;
+	--tap: 44px;
+	--tabbar-h: 60px;
+	--rail-w: 84px;
+	--safe-top: env(safe-area-inset-top, 0px);
+	--safe-bottom: env(safe-area-inset-bottom, 0px);
+	--safe-left: env(safe-area-inset-left, 0px);
+	--safe-right: env(safe-area-inset-right, 0px);
+	--font:
+		system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+	color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+	:root {
+		--bg: #151517;
+		--surface: #1f1f22;
+		--surface-2: #2a2a2e;
+		--text: #ececee;
+		--muted: #9a9aa2;
+		--border: #34343a;
+		--accent: #fb923c;
+		--accent-text: #1b1b1d;
+		--danger: #f97066;
+	}
+}
+
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
+}
+
+html,
+body {
+	margin: 0;
+	background: var(--bg);
+	color: var(--text);
+	font-family: var(--font);
+	font-size: 16px;
+	line-height: 1.45;
+	-webkit-text-size-adjust: 100%;
+	-webkit-tap-highlight-color: transparent;
+}
+
+h1,
+h2,
+h3 {
+	line-height: 1.2;
+	margin: 0 0 0.5em;
+}
+
+a {
+	color: var(--accent);
+}
+
+button,
+input,
+textarea,
+select {
+	font: inherit;
+	color: inherit;
+}
+
+.btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.5em;
+	min-height: var(--tap);
+	padding: 0 1.1em;
+	border-radius: var(--radius);
+	border: 1px solid var(--border);
+	background: var(--surface);
+	cursor: pointer;
+	text-decoration: none;
+	color: var(--text);
+}
+
+.btn-primary {
+	background: var(--accent);
+	border-color: var(--accent);
+	color: var(--accent-text);
+	font-weight: 600;
+}
+
+.btn-danger {
+	color: var(--danger);
+}
+
+.input {
+	width: 100%;
+	min-height: var(--tap);
+	padding: 0 0.9em;
+	border-radius: var(--radius);
+	border: 1px solid var(--border);
+	background: var(--surface);
+}
+
+.input:focus-visible,
+.btn:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 2px;
+}
+
+.muted {
+	color: var(--muted);
+}
+
+.visually-hidden {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+	clip: rect(0 0 0 0);
+	white-space: nowrap;
+}
