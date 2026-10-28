@@ -33,7 +33,8 @@ async function cacheFirst(request: Request, cacheName: string) {
 	const hit = await caches.match(request);
 	if (hit) return hit;
 	const res = await fetch(request);
-	if (res.ok) (await caches.open(cacheName)).put(request, res.clone());
+	// Only keep immutable files (a small cover still being fetched is served as a stopgap).
+	if (res.ok && res.headers.get('cache-control')?.includes('immutable')) (await caches.open(cacheName)).put(request, res.clone());
 	return res;
 }
 

@@ -3,7 +3,7 @@ import { composerPeriod, decadeForYear, isClassical } from '../../domain/eras';
 import { bestMatch, matchTitle, splitArtists } from '../../domain/matching';
 import { normalizeArtistName, normalizeTitle, normKey, releaseYear } from '../../domain/normalize';
 import { byFrequency, instrumentName, providerGenres, topGenres } from '../../domain/tags';
-import { downloadArtwork } from '../artwork';
+import { downloadArtwork, downloadThumb, findThumb, smallArtworkUrl } from '../artwork';
 import type { DB as Db, DbOrTx as DB } from '../db/client';
 import { entities, entityArtists, externalIds, kv, type Entity } from '../db/schema';
 import { ensureEntity, findByExternalId, findByNormKey } from '../library/entities';
@@ -12,6 +12,7 @@ import { listedSql } from '../library/relations';
 import type { FetchFn } from '../providers/http';
 import type { MbArtist, MbRecording, MusicBrainzClient } from '../providers/musicbrainz';
 import type { Providers } from '../providers/resolve';
+import { ProviderError } from '../providers/types';
 import type { SuggestPayload } from './suggestions';
 import { addAutoTags, effectiveFor, hasManual, setAutoTags, tagsFor } from './tags';
 
@@ -181,6 +182,7 @@ async function enrichRelease(deps: EnrichDeps, entity: Entity, payload: EnrichPa
 	if (facts?.artistInstruments.length && artist) addAutoTags(db, artist.id, 'instrument', facts.artistInstruments);
 
 	await artworkFallback(deps, entity, album, payload, facts);
+	await ensureThumb(deps, entity.id).catch((err) => deps.log?.(`thumbnail for ${entity.id} failed: ${err}`));
 
 	if (artist) {
 		if (artist.enrichStatus === 'pending') deps.enqueue({ entityId: artist.id });
@@ -327,11 +329,47 @@ async function artworkFallback(deps: EnrichDeps, entity: Entity, album: Entity |
 		try {
 			const file = await downloadArtwork(url, deps.artworkDir, { fetchImpl: deps.fetchImpl });
 			deps.db.update(entities).set({ artworkPath: file }).where(inArray(entities.id, targets.map((t) => t.id))).run();
+			const small = smallArtworkUrl(url);
+			if (small) await downloadThumb(small, file, deps.artworkDir, { fetchImpl: deps.fetchImpl }).catch(() => {});
 			return;
 		} catch (err) {
 			deps.log?.(`artwork fallback ${url} failed: ${err}`);
 		}
 	}
+}
+
+/**
+ * Downloads the small copy of an entity's cover from wherever it can be found again: Apple or
+ * Spotify by id, or the Cover Art Archive by release group. For covers saved before small copies
+ * existed.
+ */
+export async function ensureThumb(deps: EnrichDeps, entityId: number) {
+	const { db } = deps;
+	const entity = load(db, entityId);
+	if (!entity?.artworkPath || entity.kind === 'artist' || (await findThumb(deps.artworkDir, entity.artworkPath))) return;
+	const album = entity.kind === 'track' ? load(db, entity.albumId) : undefined;
+	const sources: (() => Promise<string | undefined>)[] = [];
+	for (const e of [entity, album]) {
+		if (!e) continue;
+		const kind = e.kind as 'album' | 'track';
+		const apple = externalId(db, e.id, 'apple');
+		if (apple && deps.providers.apple) sources.push(async () => smallArtworkUrl((await deps.providers.apple!.lookup({ kind, id: apple }))?.artworkUrl));
+		const spotify = externalId(db, e.id, 'spotify');
+		if (spotify && deps.providers.spotify) sources.push(async () => (await deps.providers.spotify!.lookup({ kind, id: spotify }))?.thumbUrl);
+		const rg = e.kind === 'album' ? externalId(db, e.id, 'musicbrainz') : undefined;
+		if (rg) sources.push(async () => `https://coverartarchive.org/release-group/${rg}/front-250`);
+	}
+	let error: unknown;
+	for (const source of sources) {
+		try {
+			const url = await source();
+			if (url) return void (await downloadThumb(url, entity.artworkPath, deps.artworkDir, { fetchImpl: deps.fetchImpl }));
+		} catch (err) {
+			error ??= err;
+		}
+	}
+	// Retry only lookups that failed (e.g. rate limited), not covers a source doesn't have.
+	if (error instanceof ProviderError && error.provider !== 'artwork') throw error;
 }
 
 async function enrichArtist(deps: EnrichDeps, artist: Entity) {

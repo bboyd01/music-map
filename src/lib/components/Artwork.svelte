@@ -6,7 +6,8 @@
 		size = 64
 	}: { path?: string | null; url?: string; name: string; size?: number } = $props();
 
-	const src = $derived(path ? `/artwork/${path}` : url);
+	// Up to 64px (192 device pixels on phones), the ~200px copy looks the same and loads far faster.
+	const src = $derived(path ? `/artwork/${path}${size <= 64 ? '?small' : ''}` : url);
 	let failed = $state(false);
 	const hue = $derived([...name].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 360, 7));
 </script>

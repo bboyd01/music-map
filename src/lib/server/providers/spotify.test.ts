@@ -21,6 +21,7 @@ describe('SpotifyProvider.lookup', () => {
 			url: 'https://open.spotify.com/album/1weenld61qoidwYuZ1GESA',
 			genres: [],
 			artworkUrl: expect.stringContaining('ab67616d0000b273'),
+			thumbUrl: expect.stringContaining('ab67616d00001e02'),
 			artist: { id: '0kbYTNQb4Pb1rPbbaF0pT4', name: 'Miles Davis' },
 			releaseDate: '1959-08-17',
 			trackCount: 5,
