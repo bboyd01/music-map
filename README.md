@@ -194,6 +194,8 @@ then fills in details:
   for classical music, also the **composer's period** (e.g. Baroque) from their lifespan.
 - **Instruments** from MusicBrainz performer credits (track → album → artist). Coverage is sparse.
 - **Artwork fallback** from the Cover Art Archive.
+- **Small covers:** each cover also gets a ~200px copy (`<name>-s.jpg`) from the same source, used
+  by the list and the map. Covers saved before this existed are filled in once in the background.
 - **Multi-artist credits** ("A, B & C") are split into separate artists using the MusicBrainz credit.
 
 Tags are inherited: a track without its own genre shows its album's, then its artist's. Editing a

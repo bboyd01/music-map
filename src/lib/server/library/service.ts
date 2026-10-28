@@ -1,6 +1,6 @@
 import { eq, inArray } from 'drizzle-orm';
 import { normKey } from '../../domain/normalize';
-import { downloadArtwork } from '../artwork';
+import { downloadArtwork, downloadThumb, smallArtworkUrl } from '../artwork';
 import type { DB } from '../db/client';
 import { entities, externalIds, listItems } from '../db/schema';
 import type { FetchFn } from '../providers/http';
@@ -130,6 +130,12 @@ export async function commitAdd(deps: LibraryDeps, ref: ProviderRef & { kind: Li
 		try {
 			const file = await downloadArtwork(item.artworkUrl, deps.artworkDir, { fetchImpl: deps.fetchImpl });
 			artworkPath ??= file;
+			const small = item.thumbUrl ?? smallArtworkUrl(item.artworkUrl);
+			if (small) {
+				await downloadThumb(small, file, deps.artworkDir, { fetchImpl: deps.fetchImpl }).catch((err) =>
+					deps.log?.(`thumbnail failed for entity ${result.entityId}: ${err}`)
+				);
+			}
 			deps.db
 				.update(entities)
 				.set({ artworkPath: file })
@@ -154,7 +160,7 @@ export async function commitAdd(deps: LibraryDeps, ref: ProviderRef & { kind: Li
 	const message = {
 		added: `Added ${item.name} to To Listen.`,
 		promoted: `Added ${item.name} to To Listen.`,
-		existing: `${item.name} is already in your list${result.listStatus === 'listened' ? ' (Listened)' : ''}.`
+		existing: `${item.name} is already in your list${result.listStatus === 'listened' ? ' (in Library)' : ''}.`
 	}[result.outcome];
 	const { artworkTargets: _, ...rest } = result;
 	return { ok: true, ...rest, artworkPath, name: item.name, message };

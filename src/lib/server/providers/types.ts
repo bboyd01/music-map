@@ -25,6 +25,8 @@ interface Base {
 	genres: string[];
 	/** Largest useful artwork URL (~600px where the provider allows choosing). */
 	artworkUrl?: string;
+	/** ~200px artwork, when the provider lists sizes separately (Spotify). */
+	thumbUrl?: string;
 }
 
 interface NormalizedArtist extends Base {

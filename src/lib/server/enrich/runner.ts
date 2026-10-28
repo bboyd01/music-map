@@ -1,7 +1,7 @@
 import type { DB } from '../db/client';
 import { enqueue } from '../jobs/queue';
 import { Worker } from '../jobs/worker';
-import { enrichEntity, markEnrichFailed, type EnrichDeps, type EnrichPayload } from './pipeline';
+import { enrichEntity, ensureThumb, markEnrichFailed, type EnrichDeps, type EnrichPayload } from './pipeline';
 import { generateSuggestions, type SuggestDeps, type SuggestPayload } from './suggestions';
 
 /** Builds the job worker with enrich/suggest handlers; the returned queue functions also wake it. */
@@ -18,12 +18,18 @@ export function createEnrichment(
 		enqueue(deps.db, 'suggest', { ...payload });
 		worker?.notify();
 	};
+	/** Fetches the small copy of an entity's existing cover. */
+	const thumb = (entityId: number) => {
+		enqueue(deps.db, 'artwork', { entityId });
+		worker?.notify();
+	};
 	const full: EnrichDeps = { ...deps, enqueue: queue, suggest };
 	worker = new Worker(
 		deps.db,
 		{
 			enrich: (job) => enrichEntity(full, job.payload as unknown as EnrichPayload),
-			suggest: async (job) => void (await generateSuggestions(suggestDeps, job.payload as unknown as SuggestPayload))
+			suggest: async (job) => void (await generateSuggestions(suggestDeps, job.payload as unknown as SuggestPayload)),
+			artwork: (job) => ensureThumb(full, (job.payload as { entityId: number }).entityId)
 		},
 		{
 			log: deps.log,
@@ -33,5 +39,5 @@ export function createEnrichment(
 			}
 		}
 	);
-	return { worker, enqueue: queue, suggest, deps: full };
+	return { worker, enqueue: queue, suggest, thumb, deps: full };
 }

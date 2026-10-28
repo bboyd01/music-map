@@ -143,6 +143,7 @@ export class SpotifyProvider implements MusicProvider {
 				url: a.external_urls?.spotify,
 				genres: a.genres ?? [],
 				artworkUrl: pickImage(a.images),
+				thumbUrl: pickImage(a.images, 200),
 				artist: artistRef(a.artists),
 				releaseDate: normalizeReleaseDate(a.release_date),
 				trackCount: a.total_tracks,
@@ -160,6 +161,7 @@ export class SpotifyProvider implements MusicProvider {
 				url: t.external_urls?.spotify,
 				genres: [],
 				artworkUrl: pickImage(t.album?.images),
+				thumbUrl: pickImage(t.album?.images, 200),
 				artist: artistRef(t.artists),
 				album: t.album ? { id: t.album.id, name: t.album.name } : undefined,
 				releaseDate: normalizeReleaseDate(t.album?.release_date),
@@ -178,7 +180,8 @@ export class SpotifyProvider implements MusicProvider {
 			name: a.name,
 			url: a.external_urls?.spotify,
 			genres: a.genres ?? [],
-			artworkUrl: pickImage(a.images)
+			artworkUrl: pickImage(a.images),
+			thumbUrl: pickImage(a.images, 200)
 		};
 	}
 

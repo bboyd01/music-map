@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { ARTWORK_FILE, downloadArtwork } from './artwork';
+import { ARTWORK_FILE, downloadArtwork, downloadThumb, findThumb, smallArtworkUrl } from './artwork';
 import { fixtureFetch, type Fixture } from './providers/fixtures';
 
 const JPEG = 'https://is1-ssl.mzstatic.com/image/thumb/x.jpg/600x600bb.jpg';
@@ -62,5 +62,26 @@ describe('downloadArtwork', () => {
 		const big = 'x'.repeat(5 * 1024 * 1024 + 1);
 		const fetchImpl = fixtureFetch([image('https://i.scdn.co/image/big', 'image/jpeg', big)]);
 		await expect(downloadArtwork('https://i.scdn.co/image/big', dir, { fetchImpl })).rejects.toThrow(/too large/);
+	});
+});
+
+describe('small copies', () => {
+	it('derives ~200px URLs where the URL picks the size', () => {
+		expect(smallArtworkUrl(JPEG)).toBe('https://is1-ssl.mzstatic.com/image/thumb/x.jpg/200x200bb.jpg');
+		expect(smallArtworkUrl('https://coverartarchive.org/release-group/abc/front-500')).toBe('https://coverartarchive.org/release-group/abc/front-250');
+		expect(smallArtworkUrl('https://i.scdn.co/image/abc')).toBeUndefined();
+	});
+
+	it('stores the small copy next to its cover, once', async () => {
+		const small = smallArtworkUrl(JPEG)!;
+		const fetchImpl = fixtureFetch([image(JPEG), image(small, 'image/jpeg', 'small')]);
+		const file = await downloadArtwork(JPEG, dir, { fetchImpl });
+		expect(await findThumb(dir, file)).toBeUndefined();
+		const thumb = await downloadThumb(small, file, dir, { fetchImpl });
+		expect(thumb).toBe(file.replace('.jpg', '-s.jpg'));
+		expect(thumb).toMatch(ARTWORK_FILE);
+		expect(await findThumb(dir, file)).toBe(thumb);
+		expect(await downloadThumb(small, file, dir, { fetchImpl })).toBe(thumb);
+		expect(fetchImpl.calls).toHaveLength(2);
 	});
 });

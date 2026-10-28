@@ -1,7 +1,8 @@
-import { eq, ne } from 'drizzle-orm';
+import { eq, isNotNull, ne, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/sqlite-core';
 import { LASTFM_API_KEY, MB_USER_AGENT } from '$app/env/private';
 import { splitArtists } from '../../domain/matching.ts';
+import { findThumb } from '../artwork.ts';
 import { artworkDir, getDb } from '../db/index.ts';
 import { entities, kv } from '../db/schema.ts';
 import { LastfmClient } from '../providers/lastfm.ts';
@@ -41,6 +42,7 @@ export function startEnrichment() {
 		// Items enriched before MusicBrainz was configured only got provider genres and a decade.
 		once('backfill:musicbrainz', () => requeueEnriched(db, enrichment().enqueue, { missingMusicBrainz: true }));
 	}
+	void backfillThumbs();
 	enrichment().worker.start();
 }
 
@@ -49,6 +51,25 @@ function once(key: string, run: () => void) {
 	if (db.select().from(kv).where(eq(kv.key, key)).get()) return;
 	run();
 	db.insert(kv).values({ key, value: new Date().toISOString() }).run();
+}
+
+/** Once: queues a small-copy download for each cover saved before small copies existed. */
+async function backfillThumbs() {
+	const db = getDb();
+	if (db.select().from(kv).where(eq(kv.key, 'backfill:thumbs')).get()) return;
+	const rows = db
+		.select({ id: entities.id, file: entities.artworkPath })
+		.from(entities)
+		.where(isNotNull(entities.artworkPath))
+		.orderBy(sql`${entities.kind} != 'album'`, entities.id)
+		.all();
+	const seen = new Set<string>();
+	for (const { id, file } of rows) {
+		if (seen.has(file!)) continue;
+		seen.add(file!);
+		if (!(await findThumb(artworkDir, file!))) enrichment().thumb(id);
+	}
+	db.insert(kv).values({ key: 'backfill:thumbs', value: new Date().toISOString() }).onConflictDoNothing().run();
 }
 
 /** Re-enriches releases credited to combined artists so they get split into separate ones. */

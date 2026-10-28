@@ -21,7 +21,7 @@
 		return [
 			...g.nodes.map((n) => ({
 				group: 'nodes' as const,
-				data: { ...n, art: showArt && n.artworkPath ? `/artwork/${n.artworkPath}` : undefined },
+				data: { ...n, art: showArt && n.artworkPath ? `/artwork/${n.artworkPath}?small` : undefined },
 				classes: [n.type, n.stub ? 'stub' : '', n.facet ?? '', n.entityId === focus ? 'focus' : ''].join(' ')
 			})),
 			...g.links.map((l) => ({
